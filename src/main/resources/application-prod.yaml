@@ -1,0 +1,11 @@
+# 운영 서버. 값은 서버 환경변수(GitHub Secrets → 배포)로만 받는다
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+management:
+  endpoint:
+    health:
+      show-details: never

@@ -1,0 +1,8 @@
+# 내 컴퓨터. DB 접속 정보는 .env에서 (cp .env.example .env)
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    show-sql: true
