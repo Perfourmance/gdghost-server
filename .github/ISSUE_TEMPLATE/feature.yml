@@ -1,0 +1,27 @@
+name: 기능 (API)
+description: API 설계서의 행을 구현하는 할 일
+title: "[F0-00] "
+labels: ["type:feature"]
+body:
+  - type: textarea
+    id: apis
+    attributes:
+      label: API
+      description: API 설계서(노션)의 Method · Path · 이름. 하나당 한 줄
+      value: |
+        - [ ] `POST /api/v1/...` 이름
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: 완료 기준
+      value: |
+        - [ ] 통합 테스트 — 성공 / 주요 에러 코드 / 권한(401 · 403 · 어드민 404)
+        - [ ] Swagger에서 눌러 봄
+        - [ ] CI 초록색
+  - type: textarea
+    id: notes
+    attributes:
+      label: 참고
+      description: 기능 ID · 화면 ID · 비고에서 놓치기 쉬운 규칙

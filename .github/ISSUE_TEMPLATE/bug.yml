@@ -1,0 +1,23 @@
+name: 버그 (동작 오류)
+description: 동작이 문서(API 설계서)와 다를 때
+labels: ["type:bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: 무엇이 틀렸나
+      description: 요청과 실제 응답, 기대한 응답(문서 기준)
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: 다시 만드는 방법
+      value: |
+        1.
+        2.
+  - type: input
+    id: api
+    attributes:
+      label: 관련 API
+      placeholder: POST /api/v1/auth/login

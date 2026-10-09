@@ -1,0 +1,39 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IntelliJ / VS Code
+.idea/
+*.iml
+out/
+.vscode/
+
+# OS
+.DS_Store
+
+# 로컬 전용 — 기획 메모 · 보조 스크립트는 저장소에 올리지 않는다
+# (꼭 올려야 하면 git add -f <파일>)
+docs/
+scripts/
+
+# 비밀값 — 절대 올리지 않는다. 예시는 .env.example
+.env
+.env.*
+!.env.example
+*.env.local
+application-secret*.yml
+application-local.yml
+
+# 인증서 · 키 · 서비스 계정
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
+*credentials*.json
+service-account*.json
+
+# 로그
+logs/
+*.log
