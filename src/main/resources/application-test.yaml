@@ -1,0 +1,4 @@
+# 테스트. DB는 Testcontainers가 띄운 MySQL을 자동 연결(@ServiceConnection)하므로 접속 정보가 없다
+spring:
+  jpa:
+    show-sql: false
