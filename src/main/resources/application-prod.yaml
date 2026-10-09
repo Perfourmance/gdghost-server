@@ -5,6 +5,12 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
 
+springdoc:                      # 운영에서는 API 문서를 열지 않는다
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
 management:
   endpoint:
     health:

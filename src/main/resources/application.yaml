@@ -17,6 +17,13 @@ spring:
   flyway:
     enabled: true
 
+springdoc:
+  swagger-ui:
+    csrf:
+      enabled: true             # XSRF-TOKEN 쿠키를 읽어 X-XSRF-TOKEN 헤더로 보낸다 (CSRF는 M1)
+    tags-sorter: alpha
+    operations-sorter: alpha
+
 management:
   endpoints:
     web:
