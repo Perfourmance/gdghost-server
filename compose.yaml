@@ -1,0 +1,25 @@
+# 로컬 개발용 MySQL. 접속 정보는 .env에서 읽는다 (cp .env.example .env)
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: gdghost-mysql
+    environment:
+      MYSQL_DATABASE: gdghost
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?.env에 DB_PASSWORD를 적어주세요}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?.env에 DB_ROOT_PASSWORD를 적어주세요}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-time-zone=+00:00
+    ports:
+      - "127.0.0.1:3307:3306"   # 내 컴퓨터에서만. 3306은 Mac에 직접 설치한 MySQL과 겹쳐서 3307
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      retries: 10
+
+volumes:
+  mysql-data:
