@@ -7,6 +7,7 @@ GDGoC SMU 커뮤니티 **GDGhost**의 백엔드입니다. Spring Boot · Java 21
 ## 실행
 
 ```bash
+cp .env.example .env          # 처음 한 번. 비밀번호 칸을 채운다 (.env는 git에 안 올라감)
 docker compose up -d          # 로컬 MySQL
 ./gradlew bootRun             # 서버 (http://localhost:8080)
 open http://localhost:8080/swagger-ui/index.html   # API 문서
