@@ -16,6 +16,8 @@ out/
 # (꼭 올려야 하면 git add -f <파일>)
 docs/
 scripts/
+# 임시 파일 (PR 본문 초안 · 공유 글 등). 다 쓰면 지운다
+temp/
 
 # 비밀값 — 절대 올리지 않는다. 예시는 .env.example
 .env
