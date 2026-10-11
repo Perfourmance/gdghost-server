@@ -37,9 +37,9 @@ class SwaggerIntegrationTest {
         }
 
         @Test
-        void 그_밖의_주소는_막힌다() throws Exception {
+        void 그_밖의_주소는_로그인이_필요하다() throws Exception {
             mvc.perform(get("/api/v1/anything"))
-                    .andExpect(status().isForbidden());
+                    .andExpect(status().isUnauthorized());
         }
 
     }

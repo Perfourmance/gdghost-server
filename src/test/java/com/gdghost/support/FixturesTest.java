@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+import com.gdghost.common.security.TokenHasher;
 import com.gdghost.support.Fixtures.TestMember;
 
 import jakarta.servlet.http.Cookie;
@@ -64,7 +65,7 @@ class FixturesTest {
 
         assertThat(cookie.getName()).isEqualTo("GDG_SESSION");
         Long owner = jdbc.queryForObject("SELECT member_id FROM login_token WHERE token_hash = ?",
-                Long.class, Fixtures.sha256(cookie.getValue()));
+                Long.class, TokenHasher.sha256(cookie.getValue()));
         assertThat(owner).isEqualTo(member.id());
     }
 
