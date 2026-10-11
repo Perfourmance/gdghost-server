@@ -1,11 +1,5 @@
 package com.gdghost.support;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.util.Base64;
-import java.util.HexFormat;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -13,7 +7,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
-import com.gdghost.common.config.OpenApiConfig;
+import com.gdghost.common.security.SessionCookie;
+import com.gdghost.common.security.TokenHasher;
 
 import jakarta.servlet.http.Cookie;
 
@@ -27,7 +22,6 @@ public class Fixtures {
     // BCrypt는 한 번에 ~100ms라 미리 한 번만 계산
     private static final String PASSWORD_HASH = new BCryptPasswordEncoder().encode(PASSWORD);
     private static final AtomicInteger SEQUENCE = new AtomicInteger();
-    private static final SecureRandom RANDOM = new SecureRandom();
 
     private final JdbcTemplate jdbc;
     private final SimpleJdbcInsert memberInsert;
@@ -81,24 +75,12 @@ public class Fixtures {
      * 로그인 상태 쿠키. 쿠키에는 원래 토큰, DB에는 SHA-256 해시만 둔다.
      */
     public Cookie loginCookie(TestMember member) {
-        byte[] bytes = new byte[32];
-        RANDOM.nextBytes(bytes);
-        String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-
+        String token = TokenHasher.newToken();
         jdbc.update("""
                 INSERT INTO login_token (member_id, token_hash, remember, expires_at, last_used_at)
                 VALUES (?, ?, TRUE, UTC_TIMESTAMP(6) + INTERVAL 30 DAY, UTC_TIMESTAMP(6))
-                """, member.id(), sha256(token));
-        return new Cookie(OpenApiConfig.SESSION_COOKIE, token);
-    }
-
-    static String sha256(String value) {
-        try {
-            byte[] digest = MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(digest);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException(e);
-        }
+                """, member.id(), TokenHasher.sha256(token));
+        return new Cookie(SessionCookie.NAME, token);
     }
 
     private TestMember insertMember(String role) {

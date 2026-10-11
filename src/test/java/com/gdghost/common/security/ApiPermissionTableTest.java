@@ -67,7 +67,6 @@ class ApiPermissionTableTest {
         }
     }
 
-    @Disabled("#11 쿠키 인증에서 켠다")
     @ParameterizedTest(name = "{0}")
     @MethodSource("guestRejected")
     void 비회원은_401(ApiPermission api) throws Exception {

@@ -3,6 +3,8 @@ package com.gdghost.common.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import com.gdghost.common.security.SessionCookie;
+
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
@@ -15,8 +17,6 @@ import io.swagger.v3.oas.models.security.SecurityScheme;
 @Configuration
 public class OpenApiConfig {
 
-    public static final String SESSION_COOKIE = "GDG_SESSION";
-
     @Bean
     OpenAPI openApi() {
         return new OpenAPI()
@@ -28,7 +28,7 @@ public class OpenApiConfig {
                         .addSecuritySchemes("sessionCookie", new SecurityScheme()
                                 .type(SecurityScheme.Type.APIKEY)
                                 .in(SecurityScheme.In.COOKIE)
-                                .name(SESSION_COOKIE)));
+                                .name(SessionCookie.NAME)));
     }
 
 }
