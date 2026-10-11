@@ -14,7 +14,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -75,30 +74,42 @@ class ApiPermissionTableTest {
                 .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
     }
 
-    @Disabled("#13 권한에서 켠다")
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("guestAllowed")
+    void 비회원_허용_API는_로그인_없이_통과(ApiPermission api) throws Exception {
+        mvc.perform(api.toRequest())
+                .andExpect(result -> assertThat(result.getResponse().getStatus()).isNotIn(401, 403));
+    }
+
     @ParameterizedTest(name = "{0}")
     @MethodSource("staffOnly")
     void 운영진_API는_부원과_개발자에게_403(ApiPermission api) throws Exception {
         for (Cookie cookie : List.of(fixtures.loginCookie(fixtures.member()), fixtures.loginCookie(fixtures.dev()))) {
             mvc.perform(api.toRequest().cookie(cookie))
-                    .andExpect(status().isForbidden());
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.code").value("FORBIDDEN"));
         }
     }
 
-    @Disabled("#13 권한에서 켠다")
     @ParameterizedTest(name = "{0}")
     @MethodSource("devOnly")
     void 어드민_API는_개발자가_아니면_404(ApiPermission api) throws Exception {
         mvc.perform(api.toRequest())
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("NOT_FOUND"));
         for (Cookie cookie : List.of(fixtures.loginCookie(fixtures.member()), fixtures.loginCookie(fixtures.staff()))) {
             mvc.perform(api.toRequest().cookie(cookie))
-                    .andExpect(status().isNotFound());
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.code").value("NOT_FOUND"));
         }
     }
 
     static Stream<ApiPermission> guestRejected() {
         return TABLE.stream().filter(api -> api.guest().equals("401"));
+    }
+
+    static Stream<ApiPermission> guestAllowed() {
+        return TABLE.stream().filter(api -> api.access().equals("PUBLIC"));
     }
 
     static Stream<ApiPermission> staffOnly() {
