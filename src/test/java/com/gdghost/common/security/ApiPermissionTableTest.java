@@ -1,7 +1,7 @@
 package com.gdghost.common.security;
 
+import static com.gdghost.support.TestCsrf.csrfToken;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -119,7 +119,7 @@ class ApiPermissionTableTest {
         MockHttpServletRequestBuilder toRequest() {
             MockHttpServletRequestBuilder builder =
                     request(HttpMethod.valueOf(method), path.replaceAll("\\{[^}]+}", "1"));
-            return method.equals("GET") ? builder : builder.with(csrf());
+            return method.equals("GET") ? builder : builder.with(csrfToken());
         }
 
         @Override

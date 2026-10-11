@@ -1,11 +1,8 @@
 package com.gdghost.common.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.allOf;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -14,7 +11,6 @@ import java.time.ZoneOffset;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
@@ -50,7 +46,7 @@ class CookieAuthIntegrationTest {
         mvc.perform(get(ANY_API))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"))
-                .andExpect(header().doesNotExist(HttpHeaders.SET_COOKIE));
+                .andExpect(cookie().doesNotExist(SessionCookie.NAME));
     }
 
     @Test
@@ -61,7 +57,7 @@ class CookieAuthIntegrationTest {
 
         mvc.perform(get(ANY_API).cookie(cookie))
                 .andExpect(status().isNotFound())
-                .andExpect(header().doesNotExist(HttpHeaders.SET_COOKIE));
+                .andExpect(cookie().doesNotExist(SessionCookie.NAME));
 
         assertThat(expiresAt(cookie)).isEqualTo(before);
     }
@@ -106,13 +102,12 @@ class CookieAuthIntegrationTest {
 
         mvc.perform(get(ANY_API).cookie(cookie))
                 .andExpect(status().isNotFound())
-                .andExpect(header().string(HttpHeaders.SET_COOKIE, allOf(
-                        containsString(SessionCookie.NAME + "=" + cookie.getValue()),
-                        containsString("Max-Age=2592000"),
-                        containsString("Path=/"),
-                        containsString("Secure"),
-                        containsString("HttpOnly"),
-                        containsString("SameSite=Lax"))));
+                .andExpect(cookie().value(SessionCookie.NAME, cookie.getValue()))
+                .andExpect(cookie().maxAge(SessionCookie.NAME, 2592000))
+                .andExpect(cookie().path(SessionCookie.NAME, "/"))
+                .andExpect(cookie().secure(SessionCookie.NAME, true))
+                .andExpect(cookie().httpOnly(SessionCookie.NAME, true))
+                .andExpect(cookie().attribute(SessionCookie.NAME, "SameSite", "Lax"));
 
         assertThat(expiresAt(cookie)).isAfter(LocalDateTime.now(ZoneOffset.UTC).plusDays(29));
     }
@@ -125,7 +120,7 @@ class CookieAuthIntegrationTest {
 
         mvc.perform(get(ANY_API).cookie(new Cookie(SessionCookie.NAME, token)))
                 .andExpect(status().isNotFound())
-                .andExpect(header().doesNotExist(HttpHeaders.SET_COOKIE));
+                .andExpect(cookie().doesNotExist(SessionCookie.NAME));
     }
 
     @Test
@@ -153,10 +148,8 @@ class CookieAuthIntegrationTest {
     private void expectRejected(ResultActions result) throws Exception {
         result.andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"))
-                .andExpect(header().string(HttpHeaders.SET_COOKIE, allOf(
-                        containsString(SessionCookie.NAME + "=;"),
-                        containsString("Max-Age=0"),
-                        not(containsString("unknown")))));
+                .andExpect(cookie().value(SessionCookie.NAME, ""))
+                .andExpect(cookie().maxAge(SessionCookie.NAME, 0));
     }
 
     private LocalDateTime expiresAt(Cookie cookie) {
