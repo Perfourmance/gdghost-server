@@ -17,6 +17,8 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
+import com.gdghost.common.ratelimit.RateLimitedException;
+
 /**
  * 모든 에러를 RFC 7807 Problem + code(+ errors[])로 응답한다.
  * instance는 Spring이 요청 경로로 채운다.
@@ -29,6 +31,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     ResponseEntity<ProblemDetail> handleBusiness(BusinessException e) {
         return respond(e.code().toProblem(e.getMessage(), e.errors()));
+    }
+
+    @ExceptionHandler(RateLimitedException.class)
+    ResponseEntity<ProblemDetail> handleRateLimited(RateLimitedException e) {
+        ProblemDetail problem = e.code().toProblem(e.getMessage(), e.errors());
+        return ResponseEntity.status(problem.getStatus())
+                .header(HttpHeaders.RETRY_AFTER, String.valueOf(e.retryAfterSeconds()))
+                .body(problem);
     }
 
     // 내부 메시지가 밖으로 새지 않게 detail은 고정 문구
