@@ -2,6 +2,11 @@ package com.gdghost.common.error;
 
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.containsString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -12,6 +17,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import org.springframework.http.converter.HttpMessageNotWritableException;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,8 +35,9 @@ import jakarta.validation.constraints.NotBlank;
  */
 class GlobalExceptionHandlerTest {
 
+    private final ErrorLogRecorder errorLog = mock(ErrorLogRecorder.class);
     private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new TestController())
-            .setControllerAdvice(new GlobalExceptionHandler())
+            .setControllerAdvice(new GlobalExceptionHandler(errorLog))
             .build();
 
     @Test
@@ -95,6 +102,31 @@ class GlobalExceptionHandlerTest {
                 .andExpect(jsonPath("$.detail").value(not(containsString("secret"))));
     }
 
+    @Test
+    void 예상_못_한_예외는_error_log에_남긴다() throws Exception {
+        mvc.perform(get("/test/boom"));
+
+        verify(errorLog).record(any(IllegalStateException.class), eq("/test/boom"));
+    }
+
+    @Test
+    void Spring이_처리하는_5xx도_error_log에_남긴다() throws Exception {
+        mvc.perform(get("/test/not-writable"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.code").value("INTERNAL_ERROR"));
+
+        verify(errorLog).record(any(HttpMessageNotWritableException.class), eq("/test/not-writable"));
+    }
+
+    @Test
+    void 예상한_실패는_error_log에_남기지_않는다() throws Exception {
+        mvc.perform(get("/test/nickname-taken"));
+        mvc.perform(get("/test/page").param("size", "51"));
+        mvc.perform(post("/test/not-found"));
+
+        verifyNoInteractions(errorLog);
+    }
+
     @RestController
     static class TestController {
 
@@ -115,6 +147,11 @@ class GlobalExceptionHandlerTest {
 
         @GetMapping("/test/page")
         void page(@RequestParam @Max(50) int size) {
+        }
+
+        @GetMapping("/test/not-writable")
+        void notWritable() {
+            throw new HttpMessageNotWritableException("직렬화 실패");
         }
 
         @GetMapping("/test/boom")

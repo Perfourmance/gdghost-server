@@ -12,11 +12,13 @@ import org.springframework.security.web.authentication.AnonymousAuthenticationFi
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfException;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.session.DisableEncodeUrlFilter;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.servlet.HandlerExceptionResolver;
 
 import com.gdghost.common.error.BusinessException;
 import com.gdghost.common.error.ErrorCode;
+import com.gdghost.common.security.FilterExceptionFilter;
 import com.gdghost.common.security.LoginTokenAuthenticationFilter;
 import com.gdghost.common.security.LoginTokenService;
 import com.gdghost.common.security.Role;
@@ -31,6 +33,7 @@ public class SecurityConfig {
     private static final String[] PUBLIC_PATHS = {
             "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**",
             "/actuator/health",
+            "/error",   // 막아 두면 톰캣이 넘긴 에러가 401로 바뀜
     };
 
     // 비회원 처리 '허용' · '제목만'. 그 밖의 /api/v1은 로그인 필요
@@ -60,6 +63,7 @@ public class SecurityConfig {
                 .logout(AbstractHttpConfigurer::disable)
                 .csrf(csrf -> csrf.spa().csrfTokenRepository(csrfTokenRepository()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .addFilterBefore(new FilterExceptionFilter(resolver), DisableEncodeUrlFilter.class)
                 .addFilterBefore(new LoginTokenAuthenticationFilter(tokens), AnonymousAuthenticationFilter.class)
                 .exceptionHandling(handling -> handling
                         .authenticationEntryPoint((request, response, e) -> resolver.resolveException(
