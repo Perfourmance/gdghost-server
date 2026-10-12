@@ -4,6 +4,9 @@ spring:
     url: ${DB_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
+  mail:                         # 운영은 메일 계정 필수 — 없으면 기동 실패
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
 
 springdoc:                      # 운영에서는 API 문서를 열지 않는다
   api-docs:
