@@ -14,13 +14,13 @@ import com.gdghost.TestcontainersConfiguration;
 
 /**
  * 통합 테스트 공통 설정 — 실제 MySQL(Testcontainers) + MockMvc + Fixtures.
- * 각 테스트 전에 DB를 비운다(태그 시드는 남김).
+ * 각 테스트 전에 DB를 비운다(태그 시드는 남김). 메일은 보내지 않고 FakeMailGateway에 쌓는다.
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @SpringBootTest
 @AutoConfigureMockMvc
-@Import({TestcontainersConfiguration.class, Fixtures.class})
+@Import({TestcontainersConfiguration.class, Fixtures.class, FakeMailGateway.class})
 @ExtendWith(DatabaseCleaner.class)
 public @interface IntegrationTest {
 }

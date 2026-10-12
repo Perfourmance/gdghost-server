@@ -16,6 +16,18 @@ spring:
           time_zone: UTC
   flyway:
     enabled: true
+  mail:                         # 동아리 Gmail. 계정이 없으면(로컬) 보내지 않고 서버 로그에 찍는다
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+      mail.smtp.starttls.required: true
+      mail.smtp.connectiontimeout: 10000
+      mail.smtp.timeout: 10000
+      mail.smtp.writetimeout: 10000
   task:
     execution:                  # @Async 이벤트 리스너
       thread-name-prefix: async-
@@ -31,6 +43,9 @@ springdoc:
     operations-sorter: alpha
 
 management:
+  health:
+    mail:
+      enabled: false            # 헬스 체크마다 SMTP에 접속하지 않게
   endpoints:
     web:
       exposure:
