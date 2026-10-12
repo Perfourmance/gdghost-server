@@ -13,11 +13,14 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import com.gdghost.common.ratelimit.RateLimitedException;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * 모든 에러를 RFC 7807 Problem + code(+ errors[])로 응답한다.
@@ -27,6 +30,12 @@ import com.gdghost.common.ratelimit.RateLimitedException;
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    private final ErrorLogRecorder errorLog;
+
+    public GlobalExceptionHandler(ErrorLogRecorder errorLog) {
+        this.errorLog = errorLog;
+    }
 
     @ExceptionHandler(BusinessException.class)
     ResponseEntity<ProblemDetail> handleBusiness(BusinessException e) {
@@ -43,8 +52,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     // 내부 메시지가 밖으로 새지 않게 detail은 고정 문구
     @ExceptionHandler(Exception.class)
-    ResponseEntity<ProblemDetail> handleUnexpected(Exception e) {
+    ResponseEntity<ProblemDetail> handleUnexpected(Exception e, HttpServletRequest request) {
         log.error("처리하지 못한 예외", e);
+        errorLog.record(e, request.getRequestURI());
         return respond(ErrorCode.INTERNAL_ERROR.toProblem("잠시 후 다시 시도해 주세요.", List.of()));
     }
 
@@ -68,10 +78,18 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return validationFailed(errors, headers);
     }
 
-    /** Spring MVC 기본 예외(404 · 405 · 본문 해석 실패 등)에도 code를 붙인다 */
+    /**
+     * Spring MVC 기본 예외(404 · 405 · 본문 해석 실패 등)에도 code를 붙인다.
+     * 5xx(응답 직렬화 실패 등)는 대개 우리 코드의 버그라 error_log에도 남긴다.
+     */
     @Override
     protected ResponseEntity<Object> handleExceptionInternal(
             Exception e, Object body, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        if (status.is5xxServerError()) {
+            log.error("처리하지 못한 예외", e);
+            errorLog.record(e, request instanceof ServletWebRequest servlet
+                    ? servlet.getRequest().getRequestURI() : request.getDescription(false));
+        }
         ProblemDetail problem = body instanceof ProblemDetail p ? p : ProblemDetail.forStatus(status);
         ErrorCode.fromStatus(status).applyTo(problem);
         return super.handleExceptionInternal(e, problem, headers, status, request);

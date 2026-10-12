@@ -16,6 +16,12 @@ spring:
           time_zone: UTC
   flyway:
     enabled: true
+  task:
+    execution:                  # @Async 이벤트 리스너
+      thread-name-prefix: async-
+      shutdown:
+        await-termination: true   # 배포로 내려갈 때 돌던 리스너를 끝내고
+        await-termination-period: 10s
 
 springdoc:
   swagger-ui:
