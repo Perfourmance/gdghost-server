@@ -1,0 +1,45 @@
+package com.gdghost.ops;
+
+import java.time.Clock;
+import java.util.Map;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.gdghost.common.audit.OpsAction;
+import com.gdghost.common.audit.OpsAudit;
+import com.gdghost.common.audit.OpsAuditLogger;
+import com.gdghost.common.error.BusinessException;
+import com.gdghost.common.error.ErrorCode;
+import com.gdghost.member.Member;
+import com.gdghost.member.MemberRepository;
+
+/**
+ * 운영진 지정. 첫 운영진(어드민)과 운영진끼리의 지정(10단계)이 같이 쓴다.
+ */
+@Service
+public class StaffService {
+
+    private final MemberRepository members;
+    private final OpsAuditLogger opsAudit;
+    private final Clock clock;
+
+    public StaffService(MemberRepository members, OpsAuditLogger opsAudit, Clock clock) {
+        this.members = members;
+        this.opsAudit = opsAudit;
+        this.clock = clock;
+    }
+
+    // TODO 디스코드 기록(#45)
+    @Transactional
+    public StaffResponse assign(long actorId, long memberId, String staffTitle) {
+        Member member = members.findById(memberId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        member.assignStaff(staffTitle, clock.instant());
+        opsAudit.record(OpsAudit.of(actorId, OpsAction.STAFF_ASSIGN)
+                .targetMember(memberId)
+                .detail(Map.of("staffTitle", staffTitle)));
+        return StaffResponse.from(member);
+    }
+
+}

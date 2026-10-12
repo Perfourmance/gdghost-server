@@ -1,0 +1,27 @@
+# 어드민 API — IntelliJ HTTP Client로 위에서부터 차례로 실행한다 (1단계에는 어드민 화면이 없음)
+# 쿠키(GDG_SESSION · XSRF-TOKEN)는 클라이언트가 저장해 다음 요청에 자동으로 붙인다.
+# 쓰기 요청에는 XSRF-TOKEN 쿠키 값을 X-XSRF-TOKEN 헤더로 같이 보내야 한다 (CSRF).
+
+@host = http://localhost:8080
+
+### 1. CSRF 토큰 받기 — 비회원이라 401이어도 XSRF-TOKEN 쿠키는 온다
+GET {{host}}/api/v1/auth/me
+
+> {%
+    const cookie = response.headers.valuesOf("Set-Cookie").find(c => c.startsWith("XSRF-TOKEN="));
+    if (cookie) client.global.set("xsrf", cookie.split(";")[0].substring("XSRF-TOKEN=".length));
+%}
+
+### 2. 개발자 계정으로 로그인 — BOOTSTRAP_DEV_LOGIN_IDS에 넣고 재기동한 아이디
+POST {{host}}/api/v1/auth/login
+Content-Type: application/json
+X-XSRF-TOKEN: {{xsrf}}
+
+{ "loginId": "devid", "password": "비밀번호", "remember": false }
+
+### 3. 첫 운영진 지정 — memberId는 대상 부원 id
+PUT {{host}}/api/v1/admin/members/1/staff
+Content-Type: application/json
+X-XSRF-TOKEN: {{xsrf}}
+
+{ "staffTitle": "회장" }
