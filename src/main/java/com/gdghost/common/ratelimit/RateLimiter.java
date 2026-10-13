@@ -47,6 +47,19 @@ public class RateLimiter {
         return retryAfter.get();
     }
 
+    /**
+     * 세지 않고 확인만 한다 — 실패만 세는 잠금(초대 코드 5회 실패 등)에서 시도 전에 부른다.
+     * @return 막혔으면 남은 초, 아니면 0
+     */
+    public long retryAfter(String key, int limit) {
+        Instant now = clock.instant();
+        Window current = windows.getIfPresent(key);
+        if (current == null || !now.isBefore(current.end()) || current.count() < limit) {
+            return 0;
+        }
+        return ceilSeconds(Duration.between(now, current.end()));
+    }
+
     private static long ceilSeconds(Duration duration) {
         return Math.max(1, (duration.toMillis() + 999) / 1000);
     }
