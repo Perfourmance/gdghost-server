@@ -1,5 +1,7 @@
 package com.gdghost.support;
 
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -69,6 +71,21 @@ public class Fixtures {
                 WHERE id = ?
                 """, member.id());
         return new TestMember(member.id(), null, null);
+    }
+
+    /** 쓸 수 있는 초대 코드 (만료 30일 뒤 · 10회) */
+    public long inviteCode(int generation) {
+        int n = SEQUENCE.incrementAndGet();
+        return new SimpleJdbcInsert(jdbc)
+                .withTableName("invite_code")
+                .usingColumns("code", "generation", "max_uses", "expires_at")
+                .usingGeneratedKeyColumns("id")
+                .executeAndReturnKey(Map.of(
+                        "code", "TEST" + n,
+                        "generation", generation,
+                        "max_uses", 10,
+                        "expires_at", LocalDateTime.now(ZoneOffset.UTC).plusDays(30)))
+                .longValue();
     }
 
     /**
