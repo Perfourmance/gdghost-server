@@ -41,4 +41,14 @@ class RateLimiterTest {
         assertThat(limiter.tryAcquire("k", 1, Duration.ofMinutes(1))).isEqualTo(1);
     }
 
+    @Test
+    void retryAfter는_세지_않고_막혔는지만_본다() {
+        assertThat(limiter.retryAfter("k", 1)).isZero();
+        limiter.tryAcquire("k", 1, Duration.ofMinutes(1));
+        clock.advance(Duration.ofSeconds(20));
+
+        assertThat(limiter.retryAfter("k", 1)).isEqualTo(40);
+        assertThat(limiter.retryAfter("k", 2)).isZero();
+    }
+
 }
