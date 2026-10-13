@@ -49,9 +49,35 @@ public class InviteCode {
         this.createdAt = now;
     }
 
+    public static InviteCode issue(String code, int generation, long createdBy, int maxUses, Instant expiresAt,
+            Instant now) {
+        return new InviteCode(code, generation, createdBy, maxUses, expiresAt, now);
+    }
+
     /** 서비스 첫 시작용 — 개발자 · 첫 운영진이 가입할 코드 */
     public static InviteCode bootstrap(String code, int generation, Instant now) {
         return new InviteCode(code, generation, null, BOOTSTRAP_MAX_USES, now.plus(BOOTSTRAP_LIFETIME), now);
+    }
+
+    // 사유가 겹치면 폐기 → 만료 → 소진 순으로 하나만
+    public InviteCodeState state(Instant now) {
+        if (revokedAt != null) {
+            return InviteCodeState.REVOKED;
+        }
+        if (!expiresAt.isAfter(now)) {
+            return InviteCodeState.EXPIRED;
+        }
+        if (usedCount >= maxUses) {
+            return InviteCodeState.EXHAUSTED;
+        }
+        return InviteCodeState.ACTIVE;
+    }
+
+    /** 이미 폐기됐으면 그대로 */
+    public void revoke(Instant now) {
+        if (revokedAt == null) {
+            revokedAt = now;
+        }
     }
 
 }
