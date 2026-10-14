@@ -1,5 +1,7 @@
 package com.gdghost.auth;
 
+import java.time.temporal.ChronoUnit;
+
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.CookieValue;
@@ -45,7 +47,10 @@ public class SignupController {
         return signupService.checkInviteCode(request.code(), deviceId, servletRequest.getRemoteAddr());
     }
 
-    @Operation(summary = "가입 인증번호 발송", description = "6자리 · 10분. 60초 안 재발송 불가, 같은 메일 하루 5회.")
+    @Operation(summary = "가입 인증번호 발송",
+            description = "6자리 · 10분. 60초 안 재발송 불가, 같은 메일 하루 5회, signupToken당 5통, IP당 시간당 20회.")
+    // 메일 주소 · 토큰을 바꿔 가며 서버 하루 메일 한도를 소진하지 못하게
+    @RateLimit(limit = 20, unit = ChronoUnit.HOURS, per = RateLimit.Per.IP)
     @PostMapping("/email-verifications")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public VerificationSentResponse sendEmailVerification(@RequestBody @Valid SignupEmailRequest request) {

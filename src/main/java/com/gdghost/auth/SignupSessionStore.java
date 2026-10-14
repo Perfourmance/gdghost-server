@@ -32,7 +32,7 @@ public class SignupSessionStore {
     }
 
     public SignupSession open(long inviteCodeId, int generation) {
-        SignupSession session = new SignupSession("st_" + TokenHasher.newToken(), inviteCodeId, generation, null,
+        SignupSession session = new SignupSession("st_" + TokenHasher.newToken(), inviteCodeId, generation, null, 0,
                 clock.instant().plus(LIFETIME));
         sessions.put(session.token(), session);
         return session;
@@ -45,6 +45,10 @@ public class SignupSessionStore {
             throw new BusinessException(ErrorCode.SIGNUP_SESSION_EXPIRED, "가입 시간이 지났습니다. 초대 코드부터 다시 입력해 주세요.");
         }
         return session;
+    }
+
+    public void recordEmailSent(String token) {
+        sessions.asMap().computeIfPresent(token, (key, session) -> session.withEmailSent());
     }
 
     public void markVerified(String token, String email) {
