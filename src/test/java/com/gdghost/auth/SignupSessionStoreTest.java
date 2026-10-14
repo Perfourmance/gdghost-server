@@ -54,4 +54,14 @@ class SignupSessionStoreTest {
         assertThat(store.get(opened.token()).expiresAt()).isEqualTo(opened.expiresAt());
     }
 
+    @Test
+    void 보낸_메일_수를_센다() {
+        String token = store.open(7, 5).token();
+
+        store.recordEmailSent(token);
+        store.recordEmailSent(token);
+
+        assertThat(store.get(token).emailSendCount()).isEqualTo(2);
+    }
+
 }

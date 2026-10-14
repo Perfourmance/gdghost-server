@@ -21,6 +21,7 @@ public class SignupService {
     static final int INVITE_CODE_MAX_FAILURES_PER_DEVICE = 5;
     static final int INVITE_CODE_MAX_FAILURES_PER_IP = 50;
     static final Duration INVITE_CODE_LOCK_WINDOW = Duration.ofMinutes(10);
+    static final int MAX_EMAIL_SENDS_PER_SESSION = 5;
 
     private final InviteCodeRepository inviteCodes;
     private final MemberRepository members;
@@ -65,13 +66,23 @@ public class SignupService {
         return new InviteCodeCheckResponse(session.token(), session.generation(), session.expiresAt());
     }
 
+    /**
+     * 메일별 제한(60초 · 하루 5회)은 주소를 바꾸면 피할 수 있어 토큰당 5통을 따로 센다.
+     * 실제로 보낸 것만 센다 — 재발송 대기 · 한도 초과로 거절된 요청은 넣지 않음.
+     */
     public VerificationSentResponse sendEmailVerification(SignupEmailRequest request) {
-        sessions.get(request.signupToken());
+        SignupSession session = sessions.get(request.signupToken());
+        if (session.emailSendCount() >= MAX_EMAIL_SENDS_PER_SESSION) {
+            throw new BusinessException(ErrorCode.RATE_LIMITED,
+                    "이번 가입에서는 인증 메일을 더 보낼 수 없습니다. 초대 코드부터 다시 시작해 주세요.");
+        }
         String email = normalize(request.email());
         if (members.existsByEmail(email)) {
             throw new BusinessException(ErrorCode.EMAIL_ALREADY_USED, "이미 가입된 이메일입니다.");
         }
-        return emailVerifier.send(VerificationPurpose.SIGNUP, email, null);
+        VerificationSentResponse sent = emailVerifier.send(VerificationPurpose.SIGNUP, email, null);
+        sessions.recordEmailSent(request.signupToken());
+        return sent;
     }
 
     public EmailVerifiedResponse confirmEmailVerification(SignupEmailConfirmRequest request) {

@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -45,10 +46,15 @@ class SignupEmailVerificationIntegrationTest {
     @Autowired
     FakeMailGateway mail;
 
+    // 요청 제한(IP당 시간당 20회)이 테스트끼리 섞이지 않게
+    private static final AtomicInteger IP_SEQUENCE = new AtomicInteger();
+
     String token;
+    String ip;
 
     @BeforeEach
     void setUp() {
+        ip = "10.19.2." + IP_SEQUENCE.incrementAndGet();
         mail.clear();
         token = sessions.open(fixtures.inviteCode(5), 5).token();
     }
@@ -119,6 +125,39 @@ class SignupEmailVerificationIntegrationTest {
     }
 
     @Test
+    void 가입_토큰_하나로는_5통까지() throws Exception {
+        for (int i = 1; i <= 5; i++) {
+            send("hong" + i + "@gmail.com").andExpect(status().isAccepted());
+        }
+
+        send("hong6@gmail.com")
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.code").value("RATE_LIMITED"));
+    }
+
+    @Test
+    void 재발송_대기로_거절된_요청은_5통에_넣지_않는다() throws Exception {
+        send("hong@gmail.com").andExpect(status().isAccepted());
+        send("hong@gmail.com").andExpect(jsonPath("$.code").value("EMAIL_RESEND_TOO_SOON"));
+
+        assertThat(sessions.get(token).emailSendCount()).isEqualTo(1);
+    }
+
+    @Test
+    void 같은_IP는_토큰을_바꿔도_시간당_20회() throws Exception {
+        // 토큰이 없어 400으로 끝나도 요청 제한은 먼저 센다 — 메일을 보내지 않고 확인
+        token = "st_unknown";
+        for (int i = 0; i < 20; i++) {
+            send("hong@gmail.com").andExpect(jsonPath("$.code").value("SIGNUP_SESSION_EXPIRED"));
+        }
+
+        send("hong@gmail.com")
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.code").value("RATE_LIMITED"))
+                .andExpect(header().exists(HttpHeaders.RETRY_AFTER));
+    }
+
+    @Test
     void 메일_형식이_아니면_400() throws Exception {
         send("not-an-email")
                 .andExpect(status().isBadRequest())
@@ -126,7 +165,12 @@ class SignupEmailVerificationIntegrationTest {
     }
 
     private ResultActions send(String email) throws Exception {
-        return mvc.perform(post("/api/v1/auth/signup/email-verifications").with(csrfToken())
+        return mvc.perform(post("/api/v1/auth/signup/email-verifications")
+                .with(request -> {
+                    request.setRemoteAddr(ip);
+                    return request;
+                })
+                .with(csrfToken())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"signupToken\":\"" + token + "\",\"email\":\"" + email + "\"}"));
     }
