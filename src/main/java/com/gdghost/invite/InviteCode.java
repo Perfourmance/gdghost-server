@@ -73,6 +73,11 @@ public class InviteCode {
         return InviteCodeState.ACTIVE;
     }
 
+    /** 가입 완료 때 한 번. 호출 전에 잠금을 잡고 ACTIVE인지 확인한다 */
+    public void use() {
+        usedCount++;
+    }
+
     /** 이미 폐기됐으면 그대로 */
     public void revoke(Instant now) {
         if (revokedAt == null) {

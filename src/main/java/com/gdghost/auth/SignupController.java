@@ -4,6 +4,7 @@ import java.time.temporal.ChronoUnit;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.gdghost.common.ratelimit.RateLimit;
+import com.gdghost.common.security.SessionCookie;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -25,9 +27,11 @@ import jakarta.validation.Valid;
 public class SignupController {
 
     private final SignupService signupService;
+    private final SignupCompletionService signupCompletionService;
 
-    public SignupController(SignupService signupService) {
+    public SignupController(SignupService signupService, SignupCompletionService signupCompletionService) {
         this.signupService = signupService;
+        this.signupCompletionService = signupCompletionService;
     }
 
     @Operation(summary = "초대 코드 확인",
@@ -61,6 +65,18 @@ public class SignupController {
     @PostMapping("/email-verifications/confirm")
     public EmailVerifiedResponse confirmEmailVerification(@RequestBody @Valid SignupEmailConfirmRequest request) {
         return signupService.confirmEmailVerification(request);
+    }
+
+    @Operation(summary = "가입 완료", description = "이메일 인증까지 끝난 signupToken으로 계정을 만들고 바로 로그인한다(로그인 유지). "
+            + "IP당 시간당 10회.")
+    @RateLimit(limit = 10, unit = ChronoUnit.HOURS, per = RateLimit.Per.IP)
+    @PostMapping
+    public ResponseEntity<MeResponse> signup(@RequestBody @Valid SignupRequest request,
+            HttpServletRequest servletRequest) {
+        SignupResult result = signupCompletionService.signup(request, servletRequest.getHeader(HttpHeaders.USER_AGENT));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .header(HttpHeaders.SET_COOKIE, SessionCookie.of(result.loginToken(), true).toString())
+                .body(result.me());
     }
 
 }

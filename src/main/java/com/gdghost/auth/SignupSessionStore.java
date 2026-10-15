@@ -55,4 +55,9 @@ public class SignupSessionStore {
         sessions.asMap().computeIfPresent(token, (key, session) -> session.withVerifiedEmail(email));
     }
 
+    /** 가입 완료 뒤 — 같은 토큰으로 다시 가입하지 못하게 */
+    public void close(String token) {
+        sessions.invalidate(token);
+    }
+
 }
