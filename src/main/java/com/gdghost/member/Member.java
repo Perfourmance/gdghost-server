@@ -83,6 +83,33 @@ public class Member {
     private String suspendedReason;
     private Long suspendedBy;
 
+    /** 연락 수단 없음 · 커피챗 꺼짐 · 질문 받기 켜짐으로 시작 (API 설계서 가입 완료 비고) */
+    public static Member join(String loginId, String passwordHash, String email, int generation, long inviteCodeId,
+            MemberProfile profile, Instant now) {
+        Member member = new Member();
+        member.loginId = loginId;
+        member.passwordHash = passwordHash;
+        member.email = email;
+        member.generation = generation;
+        member.inviteCodeId = inviteCodeId;
+        member.name = profile.name();
+        member.nickname = profile.nickname();
+        member.position = profile.position();
+        member.studentNo = profile.studentNo();
+        member.department = profile.department();
+        member.status = profile.status();
+        member.statusNote = profile.statusNote();
+        member.statusNoteUpdatedAt = profile.statusNote() != null ? now : null;
+        member.bio = profile.bio();
+        member.role = Role.MEMBER;
+        member.acceptQuestion = true;
+        member.acceptCoffee = false;
+        member.pushOn = false;
+        member.hiddenFromList = false;
+        member.updatedAt = now;
+        return member;
+    }
+
     public boolean isActive() {
         return withdrawnAt == null && suspendedAt == null;
     }
