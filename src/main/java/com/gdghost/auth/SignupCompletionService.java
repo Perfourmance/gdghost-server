@@ -23,7 +23,6 @@ import com.gdghost.member.MemberProfile;
 import com.gdghost.member.MemberRepository;
 import com.gdghost.member.MemberTagWriter;
 import com.gdghost.member.Nicknames;
-import com.gdghost.member.ProfileCompleteness;
 import com.gdghost.tag.TagService;
 
 @Service
@@ -40,11 +39,12 @@ public class SignupCompletionService {
     private final TagService tagService;
     private final PasswordEncoder passwordEncoder;
     private final LoginTokenService loginTokens;
+    private final MeReader meReader;
     private final Clock clock;
 
     public SignupCompletionService(SignupSessionStore sessions, InviteCodeRepository inviteCodes,
             MemberRepository members, MemberTagWriter memberTags, TagService tagService,
-            PasswordEncoder passwordEncoder, LoginTokenService loginTokens, Clock clock) {
+            PasswordEncoder passwordEncoder, LoginTokenService loginTokens, MeReader meReader, Clock clock) {
         this.sessions = sessions;
         this.inviteCodes = inviteCodes;
         this.members = members;
@@ -52,6 +52,7 @@ public class SignupCompletionService {
         this.tagService = tagService;
         this.passwordEncoder = passwordEncoder;
         this.loginTokens = loginTokens;
+        this.meReader = meReader;
         this.clock = clock;
     }
 
@@ -105,10 +106,7 @@ public class SignupCompletionService {
             }
         });
 
-        ProfileCompleteness completeness = ProfileCompleteness.of(true, !skillIds.isEmpty(),
-                !experienceIds.isEmpty(), member.getStatusNote() != null, member.getBio() != null, false);
-        return new SignupResult(loginToken, new MeResponse(member.getId(), member.getLoginId(), member.getNickname(),
-                member.getGeneration(), member.getRole(), member.getStaffTitle(), 0, 0, completeness));
+        return new SignupResult(loginToken, meReader.read(member));
     }
 
     // 대소문자만 다른 아이디도 같은 것으로 본다 (DB 정렬 규칙이 대소문자 무시)

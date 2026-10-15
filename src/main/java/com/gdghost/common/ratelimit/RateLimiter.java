@@ -60,6 +60,11 @@ public class RateLimiter {
         return ceilSeconds(Duration.between(now, current.end()));
     }
 
+    /** 실패만 세는 잠금에서 성공하면 비운다 */
+    public void reset(String key) {
+        windows.invalidate(key);
+    }
+
     private static long ceilSeconds(Duration duration) {
         return Math.max(1, (duration.toMillis() + 999) / 1000);
     }
