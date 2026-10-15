@@ -72,8 +72,10 @@ public class SignupController {
     @RateLimit(limit = 10, unit = ChronoUnit.HOURS, per = RateLimit.Per.IP)
     @PostMapping
     public ResponseEntity<MeResponse> signup(@RequestBody @Valid SignupRequest request,
+            @CookieValue(name = SessionCookie.NAME, required = false) String previousToken,
             HttpServletRequest servletRequest) {
-        SignupResult result = signupCompletionService.signup(request, servletRequest.getHeader(HttpHeaders.USER_AGENT));
+        SignupResult result = signupCompletionService.signup(request, servletRequest.getHeader(HttpHeaders.USER_AGENT),
+                previousToken);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .header(HttpHeaders.SET_COOKIE, SessionCookie.of(result.loginToken(), true).toString())
                 .body(result.me());

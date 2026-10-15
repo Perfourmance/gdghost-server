@@ -59,9 +59,10 @@ public class SignupCompletionService {
     /**
      * 한 트랜잭션: 초대 코드 잠금 → 유효 확인 → used_count + 1 → member · member_tag → login_token.
      * 기수 · 메일은 요청이 아니라 signupToken에서 꺼낸다.
+     * @param previousToken 이 기기에 이미 있던 로그인 토큰 — 로그인과 같이 지운다(기기당 한 행)
      */
     @Transactional
-    public SignupResult signup(SignupRequest request, String userAgent) {
+    public SignupResult signup(SignupRequest request, String userAgent, String previousToken) {
         SignupSession session = sessions.get(request.signupToken());
         if (session.verifiedEmail() == null) {
             throw new BusinessException(ErrorCode.SIGNUP_SESSION_EXPIRED, "이메일 인증을 먼저 마쳐 주세요.");
@@ -97,6 +98,9 @@ public class SignupCompletionService {
             throw taken(e);
         }
         memberTags.add(member.getId(), tagIds);
+        if (previousToken != null) {
+            loginTokens.revoke(previousToken);
+        }
         String loginToken = loginTokens.issue(member.getId(), true, userAgent);
         // TODO 커밋 후 부원 임베딩 생성 요청(7단계)
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {

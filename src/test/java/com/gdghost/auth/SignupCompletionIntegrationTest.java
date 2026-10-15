@@ -23,6 +23,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import com.gdghost.common.security.SessionCookie;
 import com.gdghost.support.Fixtures;
@@ -104,6 +105,17 @@ class SignupCompletionIntegrationTest {
         Cookie login = result.getResponse().getCookie(SessionCookie.NAME);
         mvc.perform(get("/api/v1/auth/nicknames/availability").param("nickname", "세림").cookie(login))
                 .andExpect(jsonPath("$.available").value(true));
+    }
+
+    @Test
+    void 다른_계정으로_로그인돼_있던_기기면_예전_토큰을_지운다() throws Exception {
+        TestMember other = fixtures.member();
+        Cookie previous = fixtures.loginCookie(other);
+
+        mvc.perform(signupRequest().cookie(previous)).andExpect(status().isCreated());
+
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM login_token WHERE member_id = ?", Integer.class,
+                other.id())).isZero();
     }
 
     @Test
@@ -230,14 +242,18 @@ class SignupCompletionIntegrationTest {
     }
 
     private ResultActions signup() throws Exception {
-        return mvc.perform(post("/api/v1/auth/signup")
+        return mvc.perform(signupRequest());
+    }
+
+    private MockHttpServletRequestBuilder signupRequest() {
+        return post("/api/v1/auth/signup")
                 .with(request -> {
                     request.setRemoteAddr(ip);
                     return request;
                 })
                 .with(csrfToken())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(body.json(token)));
+                .content(body.json(token));
     }
 
     static class Body {
