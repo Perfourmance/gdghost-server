@@ -22,7 +22,7 @@ import com.gdghost.support.IntegrationTest;
 import jakarta.servlet.http.Cookie;
 
 /**
- * 컨트롤러가 아직 없어 로그인 성공은 '401이 아니라 404'로 확인한다.
+ * 로그인이 필요한 아무 API(내 세션 확인)로 필터 동작을 확인한다.
  */
 @IntegrationTest
 class CookieAuthIntegrationTest {
@@ -56,7 +56,7 @@ class CookieAuthIntegrationTest {
         LocalDateTime before = expiresAt(cookie);
 
         mvc.perform(get(ANY_API).cookie(cookie))
-                .andExpect(status().isNotFound())
+                .andExpect(status().isOk())
                 .andExpect(cookie().doesNotExist(SessionCookie.NAME));
 
         assertThat(expiresAt(cookie)).isEqualTo(before);
@@ -101,7 +101,7 @@ class CookieAuthIntegrationTest {
                 """);
 
         mvc.perform(get(ANY_API).cookie(cookie))
-                .andExpect(status().isNotFound())
+                .andExpect(status().isOk())
                 .andExpect(cookie().value(SessionCookie.NAME, cookie.getValue()))
                 .andExpect(cookie().maxAge(SessionCookie.NAME, 2592000))
                 .andExpect(cookie().path(SessionCookie.NAME, "/"))
@@ -119,7 +119,7 @@ class CookieAuthIntegrationTest {
         jdbc.update("UPDATE login_token SET last_used_at = UTC_TIMESTAMP(6) - INTERVAL 25 HOUR");
 
         mvc.perform(get(ANY_API).cookie(new Cookie(SessionCookie.NAME, token)))
-                .andExpect(status().isNotFound())
+                .andExpect(status().isOk())
                 .andExpect(cookie().doesNotExist(SessionCookie.NAME));
     }
 
