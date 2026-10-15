@@ -114,6 +114,10 @@ public class Member {
         return withdrawnAt == null && suspendedAt == null;
     }
 
+    public void markSeen(Instant now) {
+        this.lastSeenAt = now;
+    }
+
     /** 이미 운영진이면 직함만 바꾼다 */
     public void assignStaff(String staffTitle, Instant now) {
         if (!isActive() || role == Role.DEV) {
