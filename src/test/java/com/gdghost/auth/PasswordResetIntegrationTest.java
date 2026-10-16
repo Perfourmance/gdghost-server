@@ -68,7 +68,7 @@ class PasswordResetIntegrationTest {
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.resendAvailableAt").exists());
 
-        assertThat(mail.sent()).hasSize(1);
+        assertThat(mail.awaitSent(1)).hasSize(1);
         assertThat(mail.sent().getFirst().to()).isEqualTo(email);
         assertThat(jdbc.queryForObject("SELECT member_id FROM email_verification WHERE purpose = 'RESET'",
                 Long.class)).isEqualTo(member.id());
@@ -168,7 +168,7 @@ class PasswordResetIntegrationTest {
     }
 
     private String codeFromMail() {
-        Matcher code = Pattern.compile("\\d{6}").matcher(mail.sent().getLast().text());
+        Matcher code = Pattern.compile("\\d{6}").matcher(mail.awaitSent(1).getLast().text());
         assertThat(code.find()).isTrue();
         return code.group();
     }

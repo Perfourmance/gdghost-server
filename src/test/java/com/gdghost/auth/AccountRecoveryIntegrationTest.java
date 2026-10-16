@@ -60,7 +60,7 @@ class AccountRecoveryIntegrationTest {
     void 가입된_메일이면_아이디를_보낸다() throws Exception {
         findLoginId(email.toUpperCase()).andExpect(status().isAccepted());
 
-        assertThat(mail.sent()).hasSize(1);
+        assertThat(mail.awaitSent(1)).hasSize(1);
         assertThat(mail.sent().getFirst().to()).isEqualTo(email);
         assertThat(mail.sent().getFirst().text()).contains(member.loginId());
         assertThat(jdbc.queryForObject("SELECT member_id FROM email_verification WHERE purpose = 'FIND_LOGIN_ID'",
@@ -73,7 +73,7 @@ class AccountRecoveryIntegrationTest {
 
         findLoginId(suspended.loginId() + "@test.gdghost").andExpect(status().isAccepted());
 
-        assertThat(mail.sent()).hasSize(1);
+        assertThat(mail.awaitSent(1)).hasSize(1);
     }
 
     @Test
@@ -138,7 +138,7 @@ class AccountRecoveryIntegrationTest {
     }
 
     private String codeFromMail() {
-        Matcher code = Pattern.compile("\\d{6}").matcher(mail.sent().getLast().text());
+        Matcher code = Pattern.compile("\\d{6}").matcher(mail.awaitSent(1).getLast().text());
         assertThat(code.find()).isTrue();
         return code.group();
     }

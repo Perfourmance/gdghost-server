@@ -1,5 +1,7 @@
 package com.gdghost.support;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -26,6 +28,23 @@ public class FakeMailGateway implements MailGateway {
     }
 
     public List<Mail> sent() {
+        return sent;
+    }
+
+    /** 발송은 커밋 후 다른 스레드라 응답 직후엔 아직 없을 수 있다 — count통이 쌓일 때까지 최대 5초 기다린다 */
+    public List<Mail> awaitSent(int count) {
+        Instant deadline = Instant.now().plus(Duration.ofSeconds(5));
+        while (sent.size() < count) {
+            if (Instant.now().isAfter(deadline)) {
+                throw new AssertionError("메일 " + count + "통을 기다렸지만 " + sent.size() + "통");
+            }
+            try {
+                Thread.sleep(20);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new AssertionError(e);
+            }
+        }
         return sent;
     }
 
