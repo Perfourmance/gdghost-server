@@ -47,6 +47,20 @@ public class EmailVerifier {
     /** email은 소문자로 정규화된 값 */
     @Transactional
     public VerificationSentResponse send(VerificationPurpose purpose, String email, Long memberId) {
+        return issue(purpose, email, memberId, true);
+    }
+
+    /**
+     * 같은 제한(재발송 대기 · 하루 5회)으로 기록만 남기고 메일은 보내지 않는다.
+     * 비밀번호 재설정에서 가입 안 된 메일도 가입된 메일과 똑같이 응답하려고 쓴다.
+     */
+    @Transactional
+    public VerificationSentResponse recordWithoutSending(VerificationPurpose purpose, String email) {
+        return issue(purpose, email, null, false);
+    }
+
+    private VerificationSentResponse issue(VerificationPurpose purpose, String email, Long memberId,
+            boolean deliver) {
         Instant now = clock.instant();
         verifications.findFirstByEmailAndPurposeOrderByIdDesc(email, purpose)
                 .map(last -> Duration.between(now, last.getCreatedAt().plus(RESEND_AFTER)))
@@ -64,9 +78,11 @@ public class EmailVerifier {
         Instant expiresAt = now.plus(LIFETIME);
         verifications.save(EmailVerification.create(email, memberId, purpose, TokenHasher.sha256(code), expiresAt,
                 now));
-        // 한도를 넘으면 503이 나고 위 저장도 롤백된다. 발송은 커밋 후
-        mailService.send(new Mail(email, "[GDGoC] " + purpose.mailSubject(),
-                "인증번호: " + code + "\n10분 안에 입력해 주세요."));
+        if (deliver) {
+            // 한도를 넘으면 503이 나고 위 저장도 롤백된다. 발송은 커밋 후
+            mailService.send(new Mail(email, "[GDGoC] " + purpose.mailSubject(),
+                    "인증번호: " + code + "\n10분 안에 입력해 주세요."));
+        }
         return new VerificationSentResponse(expiresAt, now.plus(RESEND_AFTER));
     }
 

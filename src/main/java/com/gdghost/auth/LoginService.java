@@ -52,7 +52,7 @@ public class LoginService {
      */
     @Transactional
     public LoginResult login(LoginRequest request, String userAgent, String clientIp, String previousToken) {
-        String idKey = "login:id:" + request.loginId().strip().toLowerCase(Locale.ROOT);
+        String idKey = loginIdLockKey(request.loginId());
         String ipKey = "login:ip:" + clientIp;
         long locked = Math.max(rateLimiter.retryAfter(idKey, MAX_FAILURES_PER_LOGIN_ID),
                 rateLimiter.retryAfter(ipKey, MAX_FAILURES_PER_IP));
@@ -83,6 +83,10 @@ public class LoginService {
         boolean remember = request.rememberOrDefault();
         String token = loginTokens.issue(member.getId(), remember, userAgent);
         return new LoginResult(token, remember, meReader.read(member));
+    }
+
+    static String loginIdLockKey(String loginId) {
+        return "login:id:" + loginId.strip().toLowerCase(Locale.ROOT);
     }
 
 }

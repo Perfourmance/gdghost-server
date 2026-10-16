@@ -3,7 +3,6 @@ package com.gdghost.auth;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
-import java.util.regex.Pattern;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,14 +22,11 @@ import com.gdghost.member.MemberProfile;
 import com.gdghost.member.MemberRepository;
 import com.gdghost.member.MemberTagWriter;
 import com.gdghost.member.Nicknames;
+import com.gdghost.member.Passwords;
 import com.gdghost.tag.TagService;
 
 @Service
 public class SignupCompletionService {
-
-    // 8–64자(BCrypt 72바이트 한계 안), 영문 · 숫자 · 특수문자 모두, 공백 없음
-    private static final Pattern PASSWORD_RULE =
-            Pattern.compile("(?=.*[A-Za-z])(?=.*\\d)(?=.*[^A-Za-z0-9\\s])\\S{8,64}");
 
     private final SignupSessionStore sessions;
     private final InviteCodeRepository inviteCodes;
@@ -67,9 +63,7 @@ public class SignupCompletionService {
         if (session.verifiedEmail() == null) {
             throw new BusinessException(ErrorCode.SIGNUP_SESSION_EXPIRED, "이메일 인증을 먼저 마쳐 주세요.");
         }
-        if (!PASSWORD_RULE.matcher(request.password()).matches()) {
-            throw new BusinessException(ErrorCode.PASSWORD_POLICY, "비밀번호는 8자 이상, 영문 · 숫자 · 특수문자를 모두 넣어 주세요.");
-        }
+        Passwords.check(request.password());
         SignupProfileRequest profile = request.profile();
         String nickname = profile.nickname().strip();
         if (Nicknames.isReserved(nickname)) {

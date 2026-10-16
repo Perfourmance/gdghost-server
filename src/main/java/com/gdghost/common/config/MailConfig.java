@@ -21,7 +21,8 @@ import com.gdghost.common.mail.SmtpMailGateway;
 @Configuration
 public class MailConfig {
 
-    static final int DAILY_LIMIT = 100;
+    // Gmail 일반 계정 한도(최근 24시간 약 500통)보다 낮게 — 서버는 한국 날짜로 세서 자정 전후로 2배까지 나갈 수 있음
+    static final int DAILY_LIMIT = 200;
 
     /** SMTP 계정이 있으면 실제 발송, 없으면(로컬) 로그만 */
     @Bean

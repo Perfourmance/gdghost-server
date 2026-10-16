@@ -45,6 +45,11 @@ public class LoginTokenService {
         jdbc.update("DELETE FROM login_token WHERE token_hash = ?", TokenHasher.sha256(token));
     }
 
+    /** 모든 기기 로그아웃 — 비밀번호 재설정 · 정지 */
+    public void revokeAll(long memberId) {
+        jdbc.update("DELETE FROM login_token WHERE member_id = ?", memberId);
+    }
+
     /**
      * 만료 · 정지 · 탈퇴면 토큰을 지우고 empty.
      * 마지막 연장(last_used_at)에서 24시간이 지났을 때만 연장 — 매 요청 DB 쓰기 방지.
