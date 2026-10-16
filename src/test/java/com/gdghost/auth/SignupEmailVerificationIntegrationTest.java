@@ -75,7 +75,7 @@ class SignupEmailVerificationIntegrationTest {
                 .containsEntry("purpose", "SIGNUP")
                 .containsEntry("minutes", 10L);
 
-        assertThat(awaitMail()).isTrue();
+        assertThat(mail.awaitSent(1)).hasSize(1);
         assertThat(mail.sent().getFirst().to()).isEqualTo("hong@gmail.com");
         Matcher code = Pattern.compile("\\d{6}").matcher(mail.sent().getFirst().text());
         assertThat(code.find()).isTrue();
@@ -173,17 +173,6 @@ class SignupEmailVerificationIntegrationTest {
                 .with(csrfToken())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"signupToken\":\"" + token + "\",\"email\":\"" + email + "\"}"));
-    }
-
-    private boolean awaitMail() throws InterruptedException {
-        Instant deadline = Instant.now().plus(Duration.ofSeconds(5));
-        while (Instant.now().isBefore(deadline)) {
-            if (!mail.sent().isEmpty()) {
-                return true;
-            }
-            Thread.sleep(50);
-        }
-        return false;
     }
 
 }
