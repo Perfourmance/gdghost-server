@@ -114,6 +114,12 @@ public class Member {
         return withdrawnAt == null && suspendedAt == null;
     }
 
+    public void changePassword(String passwordHash, Instant now) {
+        this.passwordHash = passwordHash;
+        this.passwordChangedAt = now;
+        this.updatedAt = now;
+    }
+
     public void markSeen(Instant now) {
         this.lastSeenAt = now;
     }
