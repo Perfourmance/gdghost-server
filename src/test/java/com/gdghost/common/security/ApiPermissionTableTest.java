@@ -44,7 +44,7 @@ class ApiPermissionTableTest {
 
     @Test
     void 표가_API_목록과_맞다() {
-        assertThat(TABLE).hasSize(128);
+        assertThat(TABLE).hasSize(127);
         assertThat(TABLE.stream().map(ApiPermission::name).collect(Collectors.toSet())).hasSize(TABLE.size());
 
         Set<String> accesses = Set.of("PUBLIC", "MEMBER", "STAFF", "DEV");

@@ -23,6 +23,7 @@ import com.gdghost.common.security.TokenHasher;
 /**
  * 메일 인증번호 6자리 — 가입 · 비밀번호 재설정 · 이메일 변경이 같이 쓴다.
  * 같은 메일 · 용도에서는 가장 최근 번호만 유효하다 (다시 보내면 이전 번호는 무효).
+ * 아이디 안내처럼 번호 없는 메일도 같은 표에 남겨 발송 제한을 같이 센다.
  */
 @Component
 public class EmailVerifier {
@@ -59,20 +60,26 @@ public class EmailVerifier {
         return issue(purpose, email, null, false);
     }
 
+    /**
+     * 번호 없는 안내 메일. 제한은 {@link VerificationPurpose#limitGroup()}의 인증번호와 합산한다.
+     * text가 null이면 기록만 남기고 보내지 않는다 (가입 안 된 메일).
+     */
+    @Transactional
+    public void sendNotice(VerificationPurpose purpose, String email, Long memberId, String text) {
+        Instant now = clock.instant();
+        checkLimits(purpose, email, now);
+        // code_hash는 NOT NULL — 아무도 모르는 값을 넣어 확인에 쓰일 수 없게
+        verifications.save(EmailVerification.create(email, memberId, purpose,
+                TokenHasher.sha256(TokenHasher.newToken()), now, now));
+        if (text != null) {
+            mailService.send(new Mail(email, "[GDGoC] " + purpose.mailSubject(), text));
+        }
+    }
+
     private VerificationSentResponse issue(VerificationPurpose purpose, String email, Long memberId,
             boolean deliver) {
         Instant now = clock.instant();
-        verifications.findFirstByEmailAndPurposeOrderByIdDesc(email, purpose)
-                .map(last -> Duration.between(now, last.getCreatedAt().plus(RESEND_AFTER)))
-                .filter(wait -> wait.isPositive())
-                .ifPresent(wait -> {
-                    throw new RateLimitedException(ErrorCode.EMAIL_RESEND_TOO_SOON, (wait.toMillis() + 999) / 1000);
-                });
-        Instant startOfDay = LocalDate.ofInstant(now, KST).atStartOfDay(KST).toInstant();
-        if (verifications.countByEmailAndPurposeAndCreatedAtGreaterThanEqual(email, purpose, startOfDay)
-                >= DAILY_LIMIT) {
-            throw new BusinessException(ErrorCode.EMAIL_DAILY_LIMIT, "오늘은 더 보낼 수 없습니다. 내일 다시 시도해 주세요.");
-        }
+        checkLimits(purpose, email, now);
 
         String code = "%06d".formatted(RANDOM.nextInt(1_000_000));
         Instant expiresAt = now.plus(LIFETIME);
@@ -84,6 +91,21 @@ public class EmailVerifier {
                     "인증번호: " + code + "\n10분 안에 입력해 주세요."));
         }
         return new VerificationSentResponse(expiresAt, now.plus(RESEND_AFTER));
+    }
+
+    private void checkLimits(VerificationPurpose purpose, String email, Instant now) {
+        verifications.findFirstByEmailAndPurposeInOrderByIdDesc(email, purpose.limitGroup())
+                .map(last -> Duration.between(now, last.getCreatedAt().plus(RESEND_AFTER)))
+                .filter(wait -> wait.isPositive())
+                .ifPresent(wait -> {
+                    throw new RateLimitedException(ErrorCode.EMAIL_RESEND_TOO_SOON, (wait.toMillis() + 999) / 1000);
+                });
+        Instant startOfDay = LocalDate.ofInstant(now, KST).atStartOfDay(KST).toInstant();
+        long sentToday = verifications.countByEmailAndPurposeInAndCreatedAtGreaterThanEqual(email,
+                purpose.limitGroup(), startOfDay);
+        if (sentToday >= DAILY_LIMIT) {
+            throw new BusinessException(ErrorCode.EMAIL_DAILY_LIMIT, "오늘은 더 보낼 수 없습니다. 내일 다시 시도해 주세요.");
+        }
     }
 
     /** 틀린 횟수는 에러로 끝나도 남아야 해서 업무 예외로는 롤백하지 않는다 */

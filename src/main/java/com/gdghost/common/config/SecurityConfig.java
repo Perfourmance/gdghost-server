@@ -44,7 +44,7 @@ public class SecurityConfig {
     private static final String[] GUEST_POST_APIS = {
             "/api/v1/auth/login", "/api/v1/auth/signup", "/api/v1/auth/signup/invite-code",
             "/api/v1/auth/signup/email-verifications", "/api/v1/auth/signup/email-verifications/confirm",
-            "/api/v1/auth/find-login-id", "/api/v1/auth/email-hint", "/api/v1/auth/email-change/confirm",
+            "/api/v1/auth/find-login-id", "/api/v1/auth/email-change/confirm",
             "/api/v1/auth/password-reset", "/api/v1/auth/password-reset/codes", "/api/v1/auth/password-reset/verify",
     };
 
