@@ -26,6 +26,9 @@ public class LoginTokenService {
     public record Session(AuthMember member, boolean remember, boolean extended) {
     }
 
+    public record Issued(String token, boolean remember) {
+    }
+
     private record Row(long id, long memberId, Role role, boolean remember,
                        LocalDateTime expiresAt, LocalDateTime lastUsedAt, boolean blocked) {
     }
@@ -48,6 +51,18 @@ public class LoginTokenService {
     /** 모든 기기 로그아웃 — 비밀번호 재설정 · 정지 */
     public void revokeAll(long memberId) {
         jdbc.update("DELETE FROM login_token WHERE member_id = ?", memberId);
+    }
+
+    /**
+     * 다른 기기는 모두 로그아웃하고 이 기기만 새 토큰으로 바꾼다 — 비밀번호 변경.
+     * 로그인 유지 여부는 이 기기의 기존 토큰을 따른다.
+     */
+    public Issued reissueOnly(long memberId, String currentToken, String userAgent) {
+        boolean remember = jdbc.query("SELECT remember FROM login_token WHERE token_hash = ?",
+                (rs, i) -> rs.getBoolean("remember"), TokenHasher.sha256(currentToken))
+                .stream().findFirst().orElse(false);
+        revokeAll(memberId);
+        return new Issued(issue(memberId, remember, userAgent), remember);
     }
 
     /**
