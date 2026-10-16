@@ -1,7 +1,6 @@
 method,path,access,guest,stage
 PUT,/api/v1/admin/members/{memberId}/staff,DEV,404,1
 POST,/api/v1/auth/email-change/confirm,PUBLIC,허용,1
-POST,/api/v1/auth/email-hint,PUBLIC,허용,1
 POST,/api/v1/auth/find-login-id,PUBLIC,허용,1
 POST,/api/v1/auth/login,PUBLIC,허용,1
 GET,/api/v1/auth/login-ids/availability,PUBLIC,허용,1
