@@ -120,6 +120,12 @@ public class Member {
         this.updatedAt = now;
     }
 
+    public void changeEmail(String email, Instant now) {
+        this.email = email;
+        this.emailChangedAt = now;
+        this.updatedAt = now;
+    }
+
     public void markSeen(Instant now) {
         this.lastSeenAt = now;
     }

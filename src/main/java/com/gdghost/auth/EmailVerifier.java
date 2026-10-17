@@ -111,8 +111,15 @@ public class EmailVerifier {
     /** 틀린 횟수는 에러로 끝나도 남아야 해서 업무 예외로는 롤백하지 않는다 */
     @Transactional(noRollbackFor = BusinessException.class)
     public void confirm(VerificationPurpose purpose, String email, String code) {
+        confirm(purpose, email, code, null);
+    }
+
+    /** 이메일 변경 — 그 부원이 받은 번호만 인정한다 (같은 메일로 다른 부원이 나중에 받았으면 무효) */
+    @Transactional(noRollbackFor = BusinessException.class)
+    public void confirm(VerificationPurpose purpose, String email, String code, Long memberId) {
         Instant now = clock.instant();
         EmailVerification verification = verifications.findFirstByEmailAndPurposeOrderByIdDesc(email, purpose)
+                .filter(found -> memberId == null || memberId.equals(found.getMemberId()))
                 .orElseThrow(() -> new BusinessException(ErrorCode.VERIFICATION_CODE_INVALID,
                         "인증번호를 먼저 받아 주세요."));
         if (verification.isExpired(now)) {
