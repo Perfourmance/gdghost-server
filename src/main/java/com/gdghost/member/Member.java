@@ -140,6 +140,24 @@ public class Member {
         this.updatedAt = now;
     }
 
+    public boolean isSuspended() {
+        return suspendedAt != null;
+    }
+
+    public void suspend(String reason, long staffId, Instant now) {
+        this.suspendedAt = now;
+        this.suspendedReason = reason;
+        this.suspendedBy = staffId;
+        this.updatedAt = now;
+    }
+
+    public void unsuspend(Instant now) {
+        this.suspendedAt = null;
+        this.suspendedReason = null;
+        this.suspendedBy = null;
+        this.updatedAt = now;
+    }
+
     public void promoteToDev(Instant now) {
         this.role = Role.DEV;
         this.staffTitle = null;
