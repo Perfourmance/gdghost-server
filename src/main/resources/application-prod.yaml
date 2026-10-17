@@ -8,6 +8,9 @@ spring:
     username: ${MAIL_USERNAME}
     password: ${MAIL_PASSWORD}
 
+web:                            # 운영은 필수 — 없으면 기동 실패
+  url: ${WEB_URL}
+
 springdoc:                      # 운영에서는 API 문서를 열지 않는다
   api-docs:
     enabled: false

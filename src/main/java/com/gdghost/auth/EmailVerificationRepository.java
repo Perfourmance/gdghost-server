@@ -13,6 +13,11 @@ public interface EmailVerificationRepository extends JpaRepository<EmailVerifica
     Optional<EmailVerification> findFirstByEmailAndPurposeInOrderByIdDesc(String email,
             Collection<VerificationPurpose> purposes);
 
+    Optional<EmailVerification> findByCodeHashAndPurpose(String codeHash, VerificationPurpose purpose);
+
+    Optional<EmailVerification> findFirstByMemberIdAndPurposeOrderByIdDesc(Long memberId,
+            VerificationPurpose purpose);
+
     long countByEmailAndPurposeInAndCreatedAtGreaterThanEqual(String email, Collection<VerificationPurpose> purposes,
             Instant from);
 
