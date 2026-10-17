@@ -52,4 +52,20 @@ public class EmailChangeLog {
         return log;
     }
 
+    /** 운영진 요청은 요청 때 남기고, 부원이 링크를 열면 {@link #verify} */
+    public static EmailChangeLog staff(long memberId, String oldEmail, String newEmail, long staffId, Instant now) {
+        EmailChangeLog log = new EmailChangeLog();
+        log.memberId = memberId;
+        log.oldEmail = oldEmail;
+        log.newEmail = newEmail;
+        log.changedByType = ChangedBy.STAFF;
+        log.changedBy = staffId;
+        log.createdAt = now;
+        return log;
+    }
+
+    public void verify(Instant now) {
+        this.verifiedAt = now;
+    }
+
 }

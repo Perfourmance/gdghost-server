@@ -8,6 +8,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.function.Function;
 import java.util.random.RandomGenerator;
 
 import org.springframework.stereotype.Component;
@@ -24,11 +25,13 @@ import com.gdghost.common.security.TokenHasher;
  * 메일 인증번호 6자리 — 가입 · 비밀번호 재설정 · 이메일 변경이 같이 쓴다.
  * 같은 메일 · 용도에서는 가장 최근 번호만 유효하다 (다시 보내면 이전 번호는 무효).
  * 아이디 안내처럼 번호 없는 메일도 같은 표에 남겨 발송 제한을 같이 센다.
+ * 확인 링크도 같은 표에 토큰 해시로 남긴다.
  */
 @Component
 public class EmailVerifier {
 
     static final Duration LIFETIME = Duration.ofMinutes(10);
+    static final Duration LINK_LIFETIME = Duration.ofHours(24);
     static final Duration RESEND_AFTER = Duration.ofSeconds(60);
     static final int DAILY_LIMIT = 5;
 
@@ -74,6 +77,46 @@ public class EmailVerifier {
         if (text != null) {
             mailService.send(new Mail(email, "[GDGoC] " + purpose.mailSubject(), text));
         }
+    }
+
+    /**
+     * 확인 링크 메일. 토큰은 해시로만 남기고 24시간 유효.
+     * @param text 토큰을 받아 메일 본문을 만든다
+     * @return 만료 시각
+     */
+    @Transactional
+    public Instant sendLink(VerificationPurpose purpose, String email, long memberId, Function<String, String> text) {
+        Instant now = clock.instant();
+        checkLimits(purpose, email, now);
+
+        String token = TokenHasher.newToken();
+        Instant expiresAt = now.plus(LINK_LIFETIME);
+        verifications.save(EmailVerification.create(email, memberId, purpose, TokenHasher.sha256(token), expiresAt,
+                now));
+        mailService.send(new Mail(email, "[GDGoC] " + purpose.mailSubject(), text.apply(token)));
+        return expiresAt;
+    }
+
+    /**
+     * 링크는 한 번만 쓸 수 있고, 그 부원이 받은 가장 최근 링크만 유효하다.
+     * 감싸는 트랜잭션이 롤백되면 쓴 표시도 롤백돼 다시 쓸 수 있다.
+     */
+    @Transactional
+    public EmailVerification useLink(VerificationPurpose purpose, String token) {
+        Instant now = clock.instant();
+        EmailVerification link = verifications.findByCodeHashAndPurpose(TokenHasher.sha256(token), purpose)
+                .filter(found -> found.getVerifiedAt() == null && !found.isExpired(now))
+                .filter(found -> isLatest(found, purpose))
+                .orElseThrow(() -> new BusinessException(ErrorCode.RESET_TOKEN_INVALID,
+                        "링크가 만료됐거나 이미 사용됐습니다."));
+        link.markVerified(now);
+        return link;
+    }
+
+    private boolean isLatest(EmailVerification link, VerificationPurpose purpose) {
+        return verifications.findFirstByMemberIdAndPurposeOrderByIdDesc(link.getMemberId(), purpose)
+                .filter(latest -> latest.getId().equals(link.getId()))
+                .isPresent();
     }
 
     private VerificationSentResponse issue(VerificationPurpose purpose, String email, Long memberId,

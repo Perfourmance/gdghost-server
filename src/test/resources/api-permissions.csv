@@ -24,7 +24,7 @@ GET,/api/v1/ops/invite-codes/{codeId}/members,STAFF,401,1
 GET,/api/v1/ops/members,STAFF,401,1
 GET,/api/v1/ops/members/{memberId}/audit-logs,STAFF,401,1
 GET,/api/v1/ops/members/{memberId}/email,STAFF,401,1
-POST,/api/v1/ops/members/{memberId}/email-change,STAFF,401,1
+POST,/api/v1/admin/members/{memberId}/email-change,DEV,404,1
 DELETE,/api/v1/ops/members/{memberId}/suspension,STAFF,401,1
 POST,/api/v1/ops/members/{memberId}/suspension,STAFF,401,1
 GET,/api/v1/tags,PUBLIC,허용,1
