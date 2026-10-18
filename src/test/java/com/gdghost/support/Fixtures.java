@@ -2,6 +2,7 @@ package com.gdghost.support;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -85,6 +86,39 @@ public class Fixtures {
                         "generation", generation,
                         "max_uses", 10,
                         "expires_at", LocalDateTime.now(ZoneOffset.UTC).plusDays(30)))
+                .longValue();
+    }
+
+    /** 질문 (카테고리 JOB, 제목 '질문 N') */
+    public long question(long authorId, boolean anonymous) {
+        int n = SEQUENCE.incrementAndGet();
+        return new SimpleJdbcInsert(jdbc)
+                .withTableName("question")
+                .usingColumns("author_id", "category", "title", "body", "is_anonymous")
+                .usingGeneratedKeyColumns("id")
+                .executeAndReturnKey(Map.of(
+                        "author_id", authorId,
+                        "category", "JOB",
+                        "title", "질문 " + n,
+                        "body", "질문 본문 " + n,
+                        "is_anonymous", anonymous))
+                .longValue();
+    }
+
+    /** 답변. parentId가 있으면 답글 */
+    public long answer(long questionId, long authorId, boolean anonymous, Long parentId) {
+        Map<String, Object> values = new HashMap<>();
+        values.put("question_id", questionId);
+        values.put("parent_id", parentId);
+        values.put("depth", parentId == null ? 0 : 1);
+        values.put("author_id", authorId);
+        values.put("body", "답변 본문");
+        values.put("is_anonymous", anonymous);
+        return new SimpleJdbcInsert(jdbc)
+                .withTableName("answer")
+                .usingColumns("question_id", "parent_id", "depth", "author_id", "body", "is_anonymous")
+                .usingGeneratedKeyColumns("id")
+                .executeAndReturnKey(values)
                 .longValue();
     }
 

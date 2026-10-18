@@ -45,15 +45,15 @@ public class MyProfileController {
     }
 
     @Operation(summary = "연락 수단 저장", description = "4종을 통째로 교체, 빠진 종류는 지운다. 종류 중복 불가. "
-            + "PHONE은 숫자 · 하이픈만. isPublic false면 남에게 안 보인다(커피챗 수락 상대는 예외).")
+            + "PHONE은 숫자 · 하이픈만. isPublic false면 본인만 본다.")
     @PutMapping("/contacts")
     public ContactsResponse replaceContacts(@AuthenticationPrincipal AuthMember me,
             @RequestBody @Valid ContactsRequest request) {
         return myProfileService.replaceContacts(me.id(), request);
     }
 
-    @Operation(summary = "설정 변경", description = "보낸 필드만 바꾼다. coffeeMemo는 빈 문자열이면 지운다. "
-            + "커피챗을 켜 둔 채 메모가 없으면 400.")
+    @Operation(summary = "설정 변경", description = "보낸 필드만 바꾼다. coffeeMemo는 커피챗을 수락하면 신청자에게 보일 한 줄(일정 잡을 연락처 등), "
+            + "빈 문자열이면 지운다. 커피챗을 켜 둔 채 메모가 없으면 400.")
     @PatchMapping("/settings")
     public SettingsResponse changeSettings(@AuthenticationPrincipal AuthMember me,
             @RequestBody @Valid SettingsRequest request) {
