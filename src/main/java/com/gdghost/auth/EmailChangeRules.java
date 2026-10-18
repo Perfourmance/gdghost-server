@@ -1,7 +1,6 @@
 package com.gdghost.auth;
 
 import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -22,8 +21,6 @@ import com.gdghost.member.MemberRepository;
 @Component
 class EmailChangeRules {
 
-    static final Duration CHANGE_INTERVAL = Duration.ofDays(30);
-
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     private final MemberRepository members;
@@ -38,8 +35,8 @@ class EmailChangeRules {
 
     void checkInterval(Member member) {
         Instant changedAt = member.getEmailChangedAt();
-        if (changedAt != null && clock.instant().isBefore(changedAt.plus(CHANGE_INTERVAL))) {
-            LocalDate available = LocalDate.ofInstant(changedAt.plus(CHANGE_INTERVAL), KST);
+        if (changedAt != null && clock.instant().isBefore(changedAt.plus(Member.EMAIL_CHANGE_INTERVAL))) {
+            LocalDate available = LocalDate.ofInstant(changedAt.plus(Member.EMAIL_CHANGE_INTERVAL), KST);
             throw new BusinessException(ErrorCode.EMAIL_CHANGE_TOO_SOON,
                     "이메일은 30일에 한 번 바꿀 수 있습니다. " + available + "부터 다시 바꿀 수 있습니다.");
         }

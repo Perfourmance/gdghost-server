@@ -1,5 +1,6 @@
 package com.gdghost.member;
 
+import java.time.Duration;
 import java.time.Instant;
 
 import org.hibernate.annotations.JdbcTypeCode;
@@ -28,6 +29,9 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Member {
+
+    public static final Duration NICKNAME_CHANGE_INTERVAL = Duration.ofDays(30);
+    public static final Duration EMAIL_CHANGE_INTERVAL = Duration.ofDays(30);
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -123,6 +127,33 @@ public class Member {
     public void changeEmail(String email, Instant now) {
         this.email = email;
         this.emailChangedAt = now;
+        this.updatedAt = now;
+    }
+
+    /** 지금 바꿀 수 있으면 null */
+    public Instant nicknameChangeAvailableAt(Instant now) {
+        return availableAt(nicknameChangedAt, NICKNAME_CHANGE_INTERVAL, now);
+    }
+
+    /** 지금 바꿀 수 있으면 null */
+    public Instant emailChangeAvailableAt(Instant now) {
+        return availableAt(emailChangedAt, EMAIL_CHANGE_INTERVAL, now);
+    }
+
+    private static Instant availableAt(Instant changedAt, Duration interval, Instant now) {
+        if (changedAt == null || !now.isBefore(changedAt.plus(interval))) {
+            return null;
+        }
+        return changedAt.plus(interval);
+    }
+
+    public void changeSettings(boolean acceptQuestion, boolean acceptCoffee, String coffeeMemo,
+            boolean hiddenFromList, boolean pushOn, Instant now) {
+        this.acceptQuestion = acceptQuestion;
+        this.acceptCoffee = acceptCoffee;
+        this.coffeeMemo = coffeeMemo;
+        this.hiddenFromList = hiddenFromList;
+        this.pushOn = pushOn;
         this.updatedAt = now;
     }
 
