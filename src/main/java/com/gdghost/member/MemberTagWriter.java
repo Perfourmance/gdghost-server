@@ -15,6 +15,11 @@ public class MemberTagWriter {
         this.jdbc = jdbc;
     }
 
+    public void replace(long memberId, List<Long> tagIds) {
+        jdbc.update("DELETE FROM member_tag WHERE member_id = ?", memberId);
+        add(memberId, tagIds);
+    }
+
     public void add(long memberId, List<Long> tagIds) {
         jdbc.batchUpdate("INSERT INTO member_tag (member_id, tag_id) VALUES (?, ?)", tagIds, tagIds.size(),
                 (ps, tagId) -> {

@@ -2,6 +2,9 @@ package com.gdghost.member;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.Objects;
 
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -32,6 +35,8 @@ public class Member {
 
     public static final Duration NICKNAME_CHANGE_INTERVAL = Duration.ofDays(30);
     public static final Duration EMAIL_CHANGE_INTERVAL = Duration.ofDays(30);
+
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -145,6 +150,36 @@ public class Member {
             return null;
         }
         return changedAt.plus(interval);
+    }
+
+    public void checkNicknameChangeable(Instant now) {
+        Instant availableAt = nicknameChangeAvailableAt(now);
+        if (availableAt != null) {
+            throw new BusinessException(ErrorCode.NICKNAME_CHANGE_TOO_SOON, "닉네임은 30일에 한 번 바꿀 수 있습니다. "
+                    + LocalDate.ofInstant(availableAt, KST) + "부터 다시 바꿀 수 있습니다.");
+        }
+    }
+
+    /** 중복 · 예약어 검사는 호출하는 쪽에서 */
+    public void changeNickname(String nickname, Instant now) {
+        checkNicknameChangeable(now);
+        this.nickname = nickname;
+        this.nicknameChangedAt = now;
+        this.updatedAt = now;
+    }
+
+    /** 근황이 바뀔 때만 근황 시각을 새로 찍는다 */
+    public void changeProfile(String department, Position position, MemberStatus status, String statusNote,
+            String bio, Instant now) {
+        if (!Objects.equals(this.statusNote, statusNote)) {
+            this.statusNoteUpdatedAt = statusNote != null ? now : null;
+        }
+        this.department = department;
+        this.position = position;
+        this.status = status;
+        this.statusNote = statusNote;
+        this.bio = bio;
+        this.updatedAt = now;
     }
 
     public void changeSettings(boolean acceptQuestion, boolean acceptCoffee, String coffeeMemo,
