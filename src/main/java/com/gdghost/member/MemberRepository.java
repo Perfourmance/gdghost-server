@@ -7,9 +7,12 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 
 import com.gdghost.common.security.Role;
+
+import jakarta.persistence.LockModeType;
 
 public interface MemberRepository extends JpaRepository<Member, Long> {
 
@@ -26,6 +29,11 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     boolean existsByNickname(String nickname);
 
     boolean existsByNicknameAndIdNot(String nickname, long id);
+
+    /** 프로필 · 연락 수단 저장 — 태그 · 연락 수단을 지우고 다시 넣으므로 같은 부원의 동시 저장을 줄 세운다 */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT m FROM Member m WHERE m.id = :id")
+    Optional<Member> findByIdForUpdate(long id);
 
     /** 운영 부원 목록 — 탈퇴자 제외, 목록 숨김은 포함. 조건이 null이면 거르지 않는다. pattern은 LIKE 패턴 */
     @Query("""
