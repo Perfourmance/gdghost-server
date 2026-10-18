@@ -224,6 +224,23 @@ public class Member {
         this.updatedAt = now;
     }
 
+    /** 개인정보 컬럼을 비운다(ERD). 아이디 · 이메일 · 닉네임은 다시 가입할 때 쓸 수 있게 풀린다 */
+    public void withdraw(Instant now) {
+        this.loginId = null;
+        this.email = null;
+        this.nickname = null;
+        this.name = null;
+        this.studentNo = null;
+        this.bio = null;
+        this.statusNote = null;
+        this.statusNoteUpdatedAt = null;
+        this.coffeeMemo = null;
+        this.acceptCoffee = false;
+        this.pushOn = false;
+        this.withdrawnAt = now;
+        this.updatedAt = now;
+    }
+
     public void promoteToDev(Instant now) {
         this.role = Role.DEV;
         this.staffTitle = null;

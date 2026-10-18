@@ -11,7 +11,7 @@ import com.gdghost.common.ratelimit.RateLimitedException;
 import com.gdghost.common.ratelimit.RateLimiter;
 
 /**
- * 로그인한 부원의 현재 비밀번호 확인 — 비밀번호 변경 · 이메일 변경이 같이 쓴다.
+ * 로그인한 부원의 현재 비밀번호 확인 — 비밀번호 변경 · 이메일 변경 · 탈퇴가 같이 쓴다.
  * 틀린 것만 부원당 10분에 5회까지 두 API를 합쳐 센다 — 훔친 쿠키로 현재 비밀번호를 대입해 계정을 빼앗지 못하게.
  */
 @Component
