@@ -2,6 +2,7 @@ package com.gdghost.auth;
 
 import static com.gdghost.support.TestCsrf.csrfToken;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
@@ -63,7 +64,8 @@ class SessionIntegrationTest {
                 .andExpect(jsonPath("$.unconfirmedMustReadCount").value(0))
                 // 관심 분야 · 자기소개 · 연락 수단
                 .andExpect(jsonPath("$.profileCompleteness.filled").value(3))
-                .andExpect(jsonPath("$.profileCompleteness.total").value(6));
+                .andExpect(jsonPath("$.profileCompleteness.total").value(6))
+                .andExpect(jsonPath("$.profileCompleteness.missing", contains("SKILL", "EXPERIENCE", "STATUS_NOTE")));
 
         assertThat(jdbc.queryForObject("SELECT last_seen_at IS NOT NULL FROM member WHERE id = ?", Boolean.class,
                 member.id())).isTrue();
