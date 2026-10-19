@@ -109,8 +109,11 @@ class ProfileUpdateIntegrationTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("NICKNAME_CHANGE_TOO_SOON"));
 
-        jdbc.update("UPDATE member SET nickname_changed_at = UTC_TIMESTAMP(6) - INTERVAL 30 DAY WHERE id = ?",
-                member.id());
+        // DB와 서버 시계가 조금 어긋나도 경계에 걸리지 않게 1분 여유
+        jdbc.update("""
+                UPDATE member SET nickname_changed_at = UTC_TIMESTAMP(6) - INTERVAL 30 DAY - INTERVAL 1 MINUTE
+                WHERE id = ?
+                """, member.id());
         patchProfile("{\"nickname\":\"또다른닉\"}").andExpect(status().isOk());
     }
 
