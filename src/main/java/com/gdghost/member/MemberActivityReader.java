@@ -13,7 +13,7 @@ import org.springframework.stereotype.Repository;
 public class MemberActivityReader {
 
     /** 셀 수 있는 답변 — 답글 · 삭제된 답변 · 삭제된 질문의 답변 제외. a = answer, q = question */
-    static final String VISIBLE_ANSWER = " a.parent_id IS NULL AND a.deleted_at IS NULL AND q.deleted_at IS NULL ";
+    public static final String VISIBLE_ANSWER = " a.parent_id IS NULL AND a.deleted_at IS NULL AND q.deleted_at IS NULL ";
 
     private static final int SNIPPET_LENGTH = 100;
 

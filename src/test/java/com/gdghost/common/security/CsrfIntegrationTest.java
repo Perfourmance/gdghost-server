@@ -78,11 +78,12 @@ class CsrfIntegrationTest {
     void 쿠키_값을_헤더로_보내면_통과한다() throws Exception {
         Cookie csrf = issueCsrfCookie();
 
-        // 컨트롤러가 아직 없어 CSRF를 통과하면 404
+        // CSRF를 통과하면 본문이 없어 400
         mvc.perform(post("/api/v1/questions")
                         .cookie(csrf, fixtures.loginCookie(fixtures.member()))
                         .header(HEADER, csrf.getValue()))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
     }
 
     private Cookie issueCsrfCookie() throws Exception {
