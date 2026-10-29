@@ -83,6 +83,16 @@ public class Question {
         }
     }
 
+    /** 채택된 답변이면 채택도 풀고, 채택이 없으면 남은 답변에 따라 ANSWERED · WAITING */
+    public void answerDeleted(long answerId, boolean answerLeft) {
+        if (adoptedAnswerId != null && adoptedAnswerId == answerId) {
+            adoptedAnswerId = null;
+        }
+        if (adoptedAnswerId == null) {
+            state = answerLeft ? QuestionState.ANSWERED : QuestionState.WAITING;
+        }
+    }
+
     public void deleteByAuthor(Instant now) {
         this.deletedAt = now;
         this.deletedBy = "AUTHOR";

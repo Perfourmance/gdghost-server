@@ -81,6 +81,14 @@ public class QuestionDetailReader {
                 """, Map.of("id", questionId), Boolean.class));
     }
 
+    /** 지우지 않은 답변(답글 제외)이 하나라도 있나 — 질문 상태 기준 */
+    boolean hasLiveTopLevelAnswer(long questionId) {
+        return Boolean.TRUE.equals(jdbc.queryForObject("""
+                SELECT EXISTS (SELECT 1 FROM answer
+                               WHERE question_id = :id AND parent_id IS NULL AND deleted_at IS NULL)
+                """, Map.of("id", questionId), Boolean.class));
+    }
+
     private static Instant instant(ResultSet rs, String column) throws SQLException {
         LocalDateTime value = rs.getObject(column, LocalDateTime.class);
         return value == null ? null : value.toInstant(ZoneOffset.UTC);
