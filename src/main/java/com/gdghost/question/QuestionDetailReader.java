@@ -49,20 +49,29 @@ public class QuestionDetailReader {
 
     /** 지운 답변도 포함 (하위 답글이 남으면 자리를 둔다). id 오름차순 = 작성 순 */
     List<AnswerRow> answers(long questionId) {
-        return jdbc.query("""
-                SELECT a.id, a.parent_id, a.author_id, a.is_anonymous, al.alias_no, a.body, a.created_at, a.edited_at,
-                       a.deleted_at IS NOT NULL AS deleted, a.deleted_by,
-                """ + AuthorRows.COLUMNS + """
-                FROM answer a
-                JOIN member m ON m.id = a.author_id
-                LEFT JOIN question_anon_alias al ON al.question_id = a.question_id AND al.member_id = a.author_id
-                WHERE a.question_id = :id
-                ORDER BY a.id
-                """, Map.of("id", questionId), (rs, i) -> new AnswerRow(rs.getLong("id"),
-                rs.getObject("parent_id", Long.class), AuthorRows.read(rs, "author_id"),
+        return jdbc.query(ANSWER_SELECT + "WHERE a.question_id = :id ORDER BY a.id", Map.of("id", questionId),
+                QuestionDetailReader::answerRow);
+    }
+
+    AnswerRow answer(long answerId) {
+        return jdbc.queryForObject(ANSWER_SELECT + "WHERE a.id = :id", Map.of("id", answerId),
+                QuestionDetailReader::answerRow);
+    }
+
+    private static final String ANSWER_SELECT = """
+            SELECT a.id, a.parent_id, a.author_id, a.is_anonymous, al.alias_no, a.body, a.created_at, a.edited_at,
+                   a.deleted_at IS NOT NULL AS deleted, a.deleted_by,
+            """ + AuthorRows.COLUMNS + """
+            FROM answer a
+            JOIN member m ON m.id = a.author_id
+            LEFT JOIN question_anon_alias al ON al.question_id = a.question_id AND al.member_id = a.author_id
+            """;
+
+    private static AnswerRow answerRow(ResultSet rs, int rowNum) throws SQLException {
+        return new AnswerRow(rs.getLong("id"), rs.getObject("parent_id", Long.class), AuthorRows.read(rs, "author_id"),
                 rs.getBoolean("is_anonymous"), rs.getObject("alias_no", Integer.class), rs.getString("body"),
                 instant(rs, "created_at"), instant(rs, "edited_at"), rs.getBoolean("deleted"),
-                rs.getString("deleted_by")));
+                rs.getString("deleted_by"));
     }
 
     /** 지우지 않은 답변 · 답글이 하나라도 있나 */

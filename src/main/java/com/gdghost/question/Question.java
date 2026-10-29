@@ -76,6 +76,13 @@ public class Question {
         }
     }
 
+    /** 첫 답변이면 WAITING → ANSWERED */
+    public void markAnswered() {
+        if (state == QuestionState.WAITING) {
+            state = QuestionState.ANSWERED;
+        }
+    }
+
     public void deleteByAuthor(Instant now) {
         this.deletedAt = now;
         this.deletedBy = "AUTHOR";
