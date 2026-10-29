@@ -55,6 +55,19 @@ public class Answer {
         return answer;
     }
 
+    /** 본문이 실제로 바뀔 때만 수정 시각을 찍는다 */
+    public void edit(String body, Instant now) {
+        if (!body.equals(this.body)) {
+            this.body = body;
+            this.editedAt = now;
+        }
+    }
+
+    public void deleteByAuthor(Instant now) {
+        this.deletedAt = now;
+        this.deletedBy = "AUTHOR";
+    }
+
     public boolean isReply() {
         return parentId != null;
     }

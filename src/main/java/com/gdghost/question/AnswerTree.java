@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -81,6 +82,20 @@ final class AnswerTree {
             }
         }
         return views.reversed();
+    }
+
+    /** 트리에서 id로 찾는다 (하위 답글 포함) */
+    static Optional<AnswerNode> find(List<AnswerNode> nodes, long id) {
+        for (AnswerNode node : nodes) {
+            if (node.id() == id) {
+                return Optional.of(node);
+            }
+            Optional<AnswerNode> found = find(node.replies(), id);
+            if (found.isPresent()) {
+                return found;
+            }
+        }
+        return Optional.empty();
     }
 
     /** 살아 있는 답변 하나 */
