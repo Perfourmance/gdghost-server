@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -31,9 +32,11 @@ import jakarta.validation.constraints.Min;
 public class QuestionController {
 
     private final QuestionService questionService;
+    private final AdoptionService adoptionService;
 
-    public QuestionController(QuestionService questionService) {
+    public QuestionController(QuestionService questionService, AdoptionService adoptionService) {
         this.questionService = questionService;
+        this.adoptionService = adoptionService;
     }
 
     @Operation(summary = "질문 작성", description = "Idempotency-Key 필수. 익명 여부는 나중에 바꿀 수 없다. 부원당 분당 3회. "
@@ -73,6 +76,21 @@ public class QuestionController {
     public QuestionDetail update(@AuthenticationPrincipal AuthMember me, @PathVariable long questionId,
             @RequestBody @Valid QuestionUpdateRequest request) {
         return questionService.update(me.id(), questionId, request);
+    }
+
+    @Operation(summary = "답변 채택", description = "질문자만. 이 질문의 지우지 않은 답변(답글 아님)만, 이미 채택한 게 있으면 바꾼다. "
+            + "아니면 400 ADOPT_INVALID.")
+    @PutMapping("/{questionId}/adoption")
+    public AdoptionResponse adopt(@AuthenticationPrincipal AuthMember me, @PathVariable long questionId,
+            @RequestBody @Valid AdoptionRequest request) {
+        return adoptionService.adopt(me.id(), questionId, request.answerId());
+    }
+
+    @Operation(summary = "채택 취소", description = "질문자만. 상태는 ANSWERED로. 채택이 없어도 204.")
+    @DeleteMapping("/{questionId}/adoption")
+    public ResponseEntity<Void> cancelAdoption(@AuthenticationPrincipal AuthMember me, @PathVariable long questionId) {
+        adoptionService.cancel(me.id(), questionId);
+        return ResponseEntity.noContent().build();
     }
 
     @Operation(summary = "질문 삭제", description = "본인 질문만, 소프트 삭제. 답변은 남지만 질문과 함께 안 보인다.")
