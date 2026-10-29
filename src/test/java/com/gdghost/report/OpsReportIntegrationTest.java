@@ -89,14 +89,14 @@ class OpsReportIntegrationTest {
     }
 
     @Test
-    void 목록에_대상_작성자는_없고_탈퇴한_신고자는_이름을_가린다() throws Exception {
+    void 목록에_대상_작성자는_없고_탈퇴한_신고자는_닉네임이_null() throws Exception {
         long anonymous = fixtures.question(author.id(), true);
         TestMember withdrawn = fixtures.withdrawn();
         fixtures.report(withdrawn.id(), "QUESTION", anonymous);
 
         String body = mvc.perform(get("/api/v1/ops/reports").cookie(staffLogin))
-                .andExpect(jsonPath("$.items[0].reporter.id").isEmpty())
-                .andExpect(jsonPath("$.items[0].reporter.nickname").value("탈퇴한 부원"))
+                .andExpect(jsonPath("$.items[0].reporter.id").value(withdrawn.id()))
+                .andExpect(jsonPath("$.items[0].reporter.nickname").isEmpty())
                 .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
         assertThat(body).doesNotContain(author.nickname()).doesNotContain("\"author");
     }
