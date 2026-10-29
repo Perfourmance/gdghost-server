@@ -83,6 +83,20 @@ public class Question {
         }
     }
 
+    /** 한 질문에 하나. 이미 있으면 바꾼다 */
+    public void adopt(long answerId) {
+        adoptedAnswerId = answerId;
+        state = QuestionState.ADOPTED;
+    }
+
+    /** 채택된 답변은 살아 있으므로 풀면 ANSWERED. 채택이 없으면 그대로 */
+    public void cancelAdoption() {
+        if (adoptedAnswerId != null) {
+            adoptedAnswerId = null;
+            state = QuestionState.ANSWERED;
+        }
+    }
+
     /** 채택된 답변이면 채택도 풀고, 채택이 없으면 남은 답변에 따라 ANSWERED · WAITING */
     public void answerDeleted(long answerId, boolean answerLeft) {
         if (adoptedAnswerId != null && adoptedAnswerId == answerId) {
