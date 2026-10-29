@@ -12,7 +12,7 @@ import com.gdghost.common.error.ErrorCode;
 import com.gdghost.common.page.CursorPage;
 import com.gdghost.common.security.AuthMember;
 
-/** 질문 작성 · 목록 · 상세 */
+/** 질문 작성 · 목록 · 상세 · 수정 · 삭제 */
 @Service
 public class QuestionService {
 
@@ -89,6 +89,33 @@ public class QuestionService {
             question = find(questionId);
         }
         return detail(question, viewerId);
+    }
+
+    /** 답변(지우지 않은 답변 · 답글)이 있을 때 고치면 수정됨 표시. TODO 임베딩 재계산 · 라우팅 후보 재계산(7) */
+    @Transactional
+    public QuestionDetail update(long memberId, long questionId, QuestionUpdateRequest request) {
+        Question question = mine(memberId, questionId);
+        question.edit(request.category(), request.title(), request.body(), detailReader.hasLiveAnswer(questionId),
+                clock.instant());
+        questions.flush();
+        return detail(find(questionId), memberId);
+    }
+
+    /** 답변은 남기지만 질문과 함께 안 보인다. TODO 보내지 않은 라우팅 취소(7) */
+    @Transactional
+    public void delete(long memberId, long questionId) {
+        mine(memberId, questionId).deleteByAuthor(clock.instant());
+    }
+
+    /** 없거나 삭제 · 숨김이면 404, 남의 질문이면 403 */
+    private Question mine(long memberId, long questionId) {
+        Question question = questions.findById(questionId)
+                .filter(found -> !found.isDeleted())
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "질문을 찾을 수 없습니다."));
+        if (question.getAuthorId() != memberId) {
+            throw new BusinessException(ErrorCode.NOT_AUTHOR, "본인 질문만 고치거나 지울 수 있습니다.");
+        }
+        return question;
     }
 
     private QuestionDetailReader.QuestionRow find(long questionId) {

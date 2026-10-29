@@ -1,6 +1,7 @@
 package com.gdghost.question;
 
 import java.time.Instant;
+import java.util.Objects;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -56,6 +57,32 @@ public class Question {
         question.state = QuestionState.WAITING;
         question.createdAt = now;
         return question;
+    }
+
+    /** null은 그대로, 빈 본문은 지운다. 실제로 바뀐 게 있을 때만 수정 시각을 찍는다 */
+    public void edit(QuestionCategory category, String title, String body, boolean answered, Instant now) {
+        QuestionCategory newCategory = category != null ? category : this.category;
+        String newTitle = title != null ? title : this.title;
+        String newBody = body == null ? this.body : body.isEmpty() ? null : body;
+        if (newCategory == this.category && newTitle.equals(this.title) && Objects.equals(newBody, this.body)) {
+            return;
+        }
+        this.category = newCategory;
+        this.title = newTitle;
+        this.body = newBody;
+        this.updatedAt = now;
+        if (answered) {
+            this.editedAfterAnswer = true;
+        }
+    }
+
+    public void deleteByAuthor(Instant now) {
+        this.deletedAt = now;
+        this.deletedBy = "AUTHOR";
+    }
+
+    public boolean isDeleted() {
+        return deletedAt != null;
     }
 
 }

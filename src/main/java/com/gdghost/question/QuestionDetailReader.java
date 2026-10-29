@@ -65,6 +65,13 @@ public class QuestionDetailReader {
                 rs.getString("deleted_by")));
     }
 
+    /** 지우지 않은 답변 · 답글이 하나라도 있나 */
+    boolean hasLiveAnswer(long questionId) {
+        return Boolean.TRUE.equals(jdbc.queryForObject("""
+                SELECT EXISTS (SELECT 1 FROM answer WHERE question_id = :id AND deleted_at IS NULL)
+                """, Map.of("id", questionId), Boolean.class));
+    }
+
     private static Instant instant(ResultSet rs, String column) throws SQLException {
         LocalDateTime value = rs.getObject(column, LocalDateTime.class);
         return value == null ? null : value.toInstant(ZoneOffset.UTC);
