@@ -122,6 +122,20 @@ public class Fixtures {
                 .longValue();
     }
 
+    /** OPEN 신고 (사유 '신고 사유') */
+    public long report(long reporterId, String targetType, long targetId) {
+        return new SimpleJdbcInsert(jdbc)
+                .withTableName("report")
+                .usingColumns("reporter_id", "target_type", "target_id", "reason")
+                .usingGeneratedKeyColumns("id")
+                .executeAndReturnKey(Map.of(
+                        "reporter_id", reporterId,
+                        "target_type", targetType,
+                        "target_id", targetId,
+                        "reason", "신고 사유"))
+                .longValue();
+    }
+
     /**
      * 로그인 상태 쿠키. 쿠키에는 원래 토큰, DB에는 SHA-256 해시만 둔다.
      */

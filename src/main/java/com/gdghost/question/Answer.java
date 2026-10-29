@@ -68,6 +68,18 @@ public class Answer {
         this.deletedBy = "AUTHOR";
     }
 
+    /** 신고 처리의 숨김 */
+    public void hideByStaff(Instant now) {
+        this.deletedAt = now;
+        this.deletedBy = "STAFF";
+    }
+
+    /** 숨김 되돌리기 — 작성자가 지운 것은 부르는 쪽에서 막는다 */
+    public void restore() {
+        this.deletedAt = null;
+        this.deletedBy = null;
+    }
+
     public boolean isReply() {
         return parentId != null;
     }

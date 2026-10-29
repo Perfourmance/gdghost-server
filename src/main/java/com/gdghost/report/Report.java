@@ -48,4 +48,10 @@ public class Report {
         return report;
     }
 
+    public void close(ReportState state, long staffId, Instant now) {
+        this.state = state;
+        this.handledBy = staffId;
+        this.handledAt = now;
+    }
+
 }
