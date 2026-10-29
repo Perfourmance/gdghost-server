@@ -4,7 +4,9 @@ import java.net.URI;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -63,6 +65,21 @@ public class QuestionController {
     @GetMapping("/{questionId}")
     public QuestionDetail detail(@AuthenticationPrincipal AuthMember me, @PathVariable long questionId) {
         return questionService.detail(me.id(), questionId);
+    }
+
+    @Operation(summary = "질문 수정", description = "본인 질문만. 보낸 필드만 바꾸고(null은 그대로), 빈 본문(\"\")은 지운다. "
+            + "익명 여부는 바꿀 수 없어 보내면 400. 지우지 않은 답변 · 답글이 있을 때 내용이 바뀌면 editedAfterAnswer = true.")
+    @PatchMapping("/{questionId}")
+    public QuestionDetail update(@AuthenticationPrincipal AuthMember me, @PathVariable long questionId,
+            @RequestBody @Valid QuestionUpdateRequest request) {
+        return questionService.update(me.id(), questionId, request);
+    }
+
+    @Operation(summary = "질문 삭제", description = "본인 질문만, 소프트 삭제. 답변은 남지만 질문과 함께 안 보인다.")
+    @DeleteMapping("/{questionId}")
+    public ResponseEntity<Void> delete(@AuthenticationPrincipal AuthMember me, @PathVariable long questionId) {
+        questionService.delete(me.id(), questionId);
+        return ResponseEntity.noContent().build();
     }
 
 }
