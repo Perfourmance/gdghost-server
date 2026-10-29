@@ -73,10 +73,7 @@ final class AnswerTree {
                 view = new AnswerNode(row.id(), row.parentId(), node.depth, null, null, false, false,
                         row.createdAt(), null, row.deletedBy(), replies);
             } else {
-                view = new AnswerNode(row.id(), row.parentId(), node.depth,
-                        AuthorRef.of(row.author(), row.anonymous(), AnonLabels.answer(row.aliasNo()), viewerId),
-                        row.body(), Long.valueOf(row.id()).equals(adoptedAnswerId), row.author().id() == viewerId,
-                        row.createdAt(), row.editedAt(), null, replies);
+                view = view(row, node.depth, adoptedAnswerId, viewerId, replies);
             }
             views.add(view);
             if (row.parentId() != null) {
@@ -84,6 +81,15 @@ final class AnswerTree {
             }
         }
         return views.reversed();
+    }
+
+    /** 살아 있는 답변 하나 */
+    static AnswerNode view(QuestionDetailReader.AnswerRow row, int depth, Long adoptedAnswerId, long viewerId,
+            List<AnswerNode> replies) {
+        return new AnswerNode(row.id(), row.parentId(), depth,
+                AuthorRef.of(row.author(), row.anonymous(), AnonLabels.answer(row.aliasNo()), viewerId),
+                row.body(), Long.valueOf(row.id()).equals(adoptedAnswerId), row.author().id() == viewerId,
+                row.createdAt(), row.editedAt(), null, replies);
     }
 
 }
