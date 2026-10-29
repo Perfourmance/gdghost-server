@@ -15,7 +15,6 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 import com.gdghost.common.page.OpsPage;
-import com.gdghost.question.AuthorRef;
 
 /** 운영 신고 목록. 대상 미리보기 · 같은 대상 수는 페이지 단위로 종류별 한 번씩 */
 @Repository
@@ -25,8 +24,7 @@ public class OpsReportReader {
 
     private static final String SELECT = """
             SELECT r.id, r.target_type, r.target_id, r.reason, r.state, r.created_at, r.handled_at,
-                   r.reporter_id, rm.nickname AS reporter_nickname, rm.withdrawn_at IS NOT NULL AS reporter_withdrawn,
-                   r.handled_by, hm.nickname AS handler_nickname, hm.withdrawn_at IS NOT NULL AS handler_withdrawn
+                   r.reporter_id, rm.nickname AS reporter_nickname, r.handled_by, hm.nickname AS handler_nickname
             FROM report r
             JOIN member rm ON rm.id = r.reporter_id
             LEFT JOIN member hm ON hm.id = r.handled_by
@@ -138,18 +136,12 @@ public class OpsReportReader {
     private static Row row(ResultSet rs, int n) throws SQLException {
         long handlerId = rs.getLong("handled_by");
         OpsReportResponse.Person handledBy = rs.wasNull() ? null
-                : person(handlerId, rs.getString("handler_nickname"), rs.getBoolean("handler_withdrawn"));
+                : new OpsReportResponse.Person(handlerId, rs.getString("handler_nickname"));
         return new Row(rs.getLong("id"), ReportTargetType.valueOf(rs.getString("target_type")),
                 rs.getLong("target_id"), rs.getString("reason"), ReportState.valueOf(rs.getString("state")),
                 instant(rs, "created_at"), instant(rs, "handled_at"),
-                person(rs.getLong("reporter_id"), rs.getString("reporter_nickname"),
-                        rs.getBoolean("reporter_withdrawn")),
+                new OpsReportResponse.Person(rs.getLong("reporter_id"), rs.getString("reporter_nickname")),
                 handledBy);
-    }
-
-    private static OpsReportResponse.Person person(long id, String nickname, boolean withdrawn) {
-        return withdrawn ? new OpsReportResponse.Person(null, AuthorRef.WITHDRAWN_NICKNAME)
-                : new OpsReportResponse.Person(id, nickname);
     }
 
     private static Instant instant(ResultSet rs, String column) throws SQLException {

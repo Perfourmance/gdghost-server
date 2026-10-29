@@ -18,8 +18,8 @@ public record OpsReportResponse(
         Person handledBy,
         Instant handledAt) {
 
-    /** 탈퇴자는 id null · '탈퇴한 부원' */
-    public record Person(Long id, String nickname) {
+    /** 운영 화면의 사람 표시. 탈퇴했으면 nickname이 null */
+    public record Person(long id, String nickname) {
     }
 
 }
