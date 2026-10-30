@@ -27,6 +27,7 @@ public class MemberWithdrawalWriter {
         jdbc.update("DELETE FROM member_tag WHERE member_id = ?", memberId);
         jdbc.update("DELETE FROM member_embedding WHERE member_id = ?", memberId);
         jdbc.update("DELETE FROM push_subscription WHERE member_id = ?", memberId);
+        jdbc.update("DELETE FROM notification WHERE member_id = ?", memberId);
         jdbc.update("UPDATE email_verification SET email = NULL WHERE member_id = ? OR email = ?", memberId, email);
         jdbc.update("UPDATE email_change_log SET old_email = NULL, new_email = NULL WHERE member_id = ?", memberId);
         jdbc.update("""

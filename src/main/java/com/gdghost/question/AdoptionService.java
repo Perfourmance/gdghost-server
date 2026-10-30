@@ -12,23 +12,29 @@ public class AdoptionService {
 
     private final QuestionRepository questions;
     private final AnswerRepository answers;
+    private final QuestionNotifier notifier;
 
-    public AdoptionService(QuestionRepository questions, AnswerRepository answers) {
+    public AdoptionService(QuestionRepository questions, AnswerRepository answers,
+            QuestionNotifier notifier) {
         this.questions = questions;
         this.answers = answers;
+        this.notifier = notifier;
     }
 
-    // TODO 답변자 앱 내 알림(6) · 라우팅 답변 이력 점수(7)
+    // TODO 웹 푸시(6) · 라우팅 답변 이력 점수(7)
     @Transactional
     public AdoptionResponse adopt(long memberId, long questionId, long answerId) {
         Question question = myQuestion(memberId, questionId);
-        boolean adoptable = answers.findById(answerId)
-                .filter(answer -> answer.getQuestionId() == questionId && !answer.isReply() && !answer.isDeleted())
-                .isPresent();
-        if (!adoptable) {
-            throw new BusinessException(ErrorCode.ADOPT_INVALID, "이 질문의 답변만 채택할 수 있습니다. 답글은 채택할 수 없습니다.");
-        }
+        Answer answer = answers.findById(answerId)
+                .filter(found -> found.getQuestionId() == questionId && !found.isReply() && !found.isDeleted())
+                .orElseThrow(() -> new BusinessException(ErrorCode.ADOPT_INVALID,
+                        "이 질문의 답변만 채택할 수 있습니다. 답글은 채택할 수 없습니다."));
+        // 이미 채택한 답변을 다시 눌러도 알림은 한 번
+        boolean newlyAdopted = !Long.valueOf(answerId).equals(question.getAdoptedAnswerId());
         question.adopt(answerId);
+        if (newlyAdopted) {
+            notifier.answerAdopted(question, answer);
+        }
         return new AdoptionResponse(question.getState(), question.getAdoptedAnswerId());
     }
 

@@ -25,18 +25,20 @@ public class AnswerService {
     private final AnswerRepository answers;
     private final QuestionAnonAliasWriter aliasWriter;
     private final QuestionDetailReader detailReader;
+    private final QuestionNotifier notifier;
     private final Clock clock;
 
     public AnswerService(QuestionRepository questions, AnswerRepository answers, QuestionAnonAliasWriter aliasWriter,
-            QuestionDetailReader detailReader, Clock clock) {
+            QuestionDetailReader detailReader, QuestionNotifier notifier, Clock clock) {
         this.questions = questions;
         this.answers = answers;
         this.aliasWriter = aliasWriter;
         this.detailReader = detailReader;
+        this.notifier = notifier;
         this.clock = clock;
     }
 
-    // TODO 질문자 · 부모 작성자 알림 + 웹 푸시(6) · 지목된 routing ANSWERED(7)
+    // TODO 웹 푸시(6) · 지목된 routing ANSWERED(7)
     @Transactional
     public AnswerNode create(long memberId, long questionId, AnswerCreateRequest request) {
         Instant now = clock.instant();
@@ -70,7 +72,9 @@ public class AnswerService {
             question.markAnswered();
         }
         questions.flush();
-        return AnswerTree.view(detailReader.answer(answer.getId()), answer.getDepth(), question.getAdoptedAnswerId(),
+        QuestionDetailReader.AnswerRow row = detailReader.answer(answer.getId());
+        notifier.answerCreated(question, parent, row);
+        return AnswerTree.view(row, answer.getDepth(), question.getAdoptedAnswerId(),
                 memberId, List.of());
     }
 

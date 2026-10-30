@@ -14,6 +14,9 @@ import com.gdghost.common.error.ErrorCode;
 import com.gdghost.common.error.ErrorField;
 import com.gdghost.common.page.OpsPage;
 import com.gdghost.common.security.AuthMember;
+import com.gdghost.notification.NotificationTarget;
+import com.gdghost.notification.NotificationType;
+import com.gdghost.notification.NotificationWriter;
 
 /** 운영진의 공지 작성 · 목록 · 수정 · 삭제. 다른 운영진이 쓴 공지도 고치고 지울 수 있다 (인계 대비) */
 @Service
@@ -25,26 +28,31 @@ public class OpsNoticeService {
     private final NoticeReadWriter readWriter;
     private final NoticeService noticeService;
     private final OpsNoticeReader opsReader;
+    private final NotificationWriter notifications;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public OpsNoticeService(NoticeRepository notices, NoticeReadWriter readWriter, NoticeService noticeService,
-            OpsNoticeReader opsReader, ApplicationEventPublisher events, Clock clock) {
+            OpsNoticeReader opsReader, NotificationWriter notifications, ApplicationEventPublisher events, Clock clock) {
         this.notices = notices;
         this.readWriter = readWriter;
         this.noticeService = noticeService;
         this.opsReader = opsReader;
+        this.notifications = notifications;
         this.events = events;
         this.clock = clock;
     }
 
-    /** 작성자는 바로 확인함. TODO 부원 전체 앱 내 알림 · 필독이면 웹 푸시(6) */
+    /** 작성자는 바로 확인함. TODO 필독이면 웹 푸시(6) */
     @Transactional
     public NoticeDetail create(AuthMember me, NoticeCreateRequest request) {
         checkDueDate(request.dueDate());
         Notice notice = notices.saveAndFlush(Notice.write(me.id(), request.title(), request.body(), request.pinned(),
                 request.mustRead(), request.dueDate(), clock.instant()));
         readWriter.confirm(notice.getId(), me.id(), clock.instant());
+        notifications.toAllExcept(me.id(), NotificationType.NOTICE,
+                notice.isMustRead() ? "필독 공지가 올라왔어요" : "새 공지가 올라왔어요", notice.getTitle(),
+                NotificationTarget.notice(notice.getId()));
         events.publishEvent(new NoticeCreatedEvent(notice.getId()));
         return noticeService.detail(notice.getId(), me);
     }
