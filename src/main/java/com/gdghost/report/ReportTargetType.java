@@ -4,8 +4,8 @@ package com.gdghost.report;
 public enum ReportTargetType {
     QUESTION, ANSWER, SHARE, SHARE_NOTE, FEED, FEED_COMMENT, NOTICE_COMMENT;
 
-    // TODO 공지 댓글(5) · 공유 · 덧붙이기 · 피드 · 피드 댓글(9)
+    // TODO 공유 · 덧붙이기 · 피드 · 피드 댓글(9)
     boolean isSupported() {
-        return this == QUESTION || this == ANSWER;
+        return this == QUESTION || this == ANSWER || this == NOTICE_COMMENT;
     }
 }

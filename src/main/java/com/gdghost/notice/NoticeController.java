@@ -37,7 +37,7 @@ public class NoticeController {
     }
 
     @Operation(summary = "공지 상세", description = "열면 읽음으로 남긴다(처음 시각 유지). "
-            + "stats는 운영진 · 개발자에게만, 부원은 null. 없거나 지웠으면 404. 댓글은 #44부터.")
+            + "stats는 운영진 · 개발자에게만, 부원은 null. 댓글은 지운 것 빼고 오래된 순 전부. 없거나 지웠으면 404.")
     @GetMapping("/{noticeId}")
     public NoticeDetail detail(@AuthenticationPrincipal AuthMember me, @PathVariable long noticeId) {
         return noticeService.detail(me, noticeId);

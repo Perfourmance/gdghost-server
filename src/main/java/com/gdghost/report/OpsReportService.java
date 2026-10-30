@@ -16,6 +16,7 @@ import com.gdghost.common.audit.OpsTargetType;
 import com.gdghost.common.error.BusinessException;
 import com.gdghost.common.error.ErrorCode;
 import com.gdghost.common.page.OpsPage;
+import com.gdghost.notice.NoticeCommentModeration;
 import com.gdghost.question.ContentModeration;
 import com.gdghost.question.ContentModeration.Content;
 
@@ -30,14 +31,16 @@ public class OpsReportService {
     private final ReportRepository reports;
     private final OpsReportReader reader;
     private final ContentModeration moderation;
+    private final NoticeCommentModeration noticeComments;
     private final OpsAuditLogger opsAudit;
     private final Clock clock;
 
     public OpsReportService(ReportRepository reports, OpsReportReader reader, ContentModeration moderation,
-            OpsAuditLogger opsAudit, Clock clock) {
+            NoticeCommentModeration noticeComments, OpsAuditLogger opsAudit, Clock clock) {
         this.reports = reports;
         this.reader = reader;
         this.moderation = moderation;
+        this.noticeComments = noticeComments;
         this.opsAudit = opsAudit;
         this.clock = clock;
     }
@@ -55,7 +58,7 @@ public class OpsReportService {
     public OpsReportResponse handle(long staffId, long reportId, ReportAction action) {
         ReportTarget target = reports.findTarget(reportId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "신고를 찾을 수 없습니다."));
-        // 대상(질문 행) → 신고 순서로 잠근다
+        // 대상(질문 · 댓글 행) → 신고 순서로 잠근다
         Content content = lock(target).orElseThrow();
         List<Report> group = reports.lockByTarget(target.type(), target.id());
         Report report = group.stream().filter(r -> r.getId() == reportId).findFirst().orElseThrow();
@@ -99,6 +102,8 @@ public class OpsReportService {
         return switch (target.type()) {
             case QUESTION -> moderation.lockQuestion(target.id());
             case ANSWER -> moderation.lockAnswer(target.id());
+            case NOTICE_COMMENT -> noticeComments.lock(target.id())
+                    .map(c -> new Content(c.authorId(), false, c.deletedBy()));
             default -> Optional.empty();
         };
     }
@@ -107,6 +112,7 @@ public class OpsReportService {
         switch (target.type()) {
             case QUESTION -> moderation.hideQuestion(target.id(), now);
             case ANSWER -> moderation.hideAnswer(target.id(), now);
+            case NOTICE_COMMENT -> noticeComments.hide(target.id(), now);
             default -> throw new IllegalStateException(target.type().name());
         }
     }
@@ -115,6 +121,7 @@ public class OpsReportService {
         switch (target.type()) {
             case QUESTION -> moderation.restoreQuestion(target.id());
             case ANSWER -> moderation.restoreAnswer(target.id());
+            case NOTICE_COMMENT -> noticeComments.restore(target.id());
             default -> throw new IllegalStateException(target.type().name());
         }
     }

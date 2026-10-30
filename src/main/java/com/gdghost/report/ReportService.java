@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.gdghost.common.error.BusinessException;
 import com.gdghost.common.error.ErrorCode;
 import com.gdghost.common.error.ErrorField;
+import com.gdghost.notice.NoticeCommentModeration;
 import com.gdghost.question.AnswerRepository;
 import com.gdghost.question.QuestionRepository;
 
@@ -21,14 +22,16 @@ public class ReportService {
     private final ReportRepository reports;
     private final QuestionRepository questions;
     private final AnswerRepository answers;
+    private final NoticeCommentModeration noticeComments;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public ReportService(ReportRepository reports, QuestionRepository questions, AnswerRepository answers,
-            ApplicationEventPublisher events, Clock clock) {
+            NoticeCommentModeration noticeComments, ApplicationEventPublisher events, Clock clock) {
         this.reports = reports;
         this.questions = questions;
         this.answers = answers;
+        this.noticeComments = noticeComments;
         this.events = events;
         this.clock = clock;
     }
@@ -56,7 +59,7 @@ public class ReportService {
         }
     }
 
-    /** 지운 글 · 숨긴 글, 질문이 지워진 답변은 없는 것으로 본다 */
+    /** 지운 글 · 숨긴 글, 질문 · 공지가 지워진 답변 · 댓글은 없는 것으로 본다 */
     private boolean isLive(ReportTargetType type, long targetId) {
         return switch (type) {
             case QUESTION -> questions.findById(targetId).filter(q -> !q.isDeleted()).isPresent();
@@ -65,6 +68,7 @@ public class ReportService {
                     .flatMap(a -> questions.findById(a.getQuestionId()))
                     .filter(q -> !q.isDeleted())
                     .isPresent();
+            case NOTICE_COMMENT -> noticeComments.isLive(targetId);
             default -> false;
         };
     }

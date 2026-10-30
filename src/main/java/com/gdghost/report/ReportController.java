@@ -28,7 +28,7 @@ public class ReportController {
     }
 
     @Operation(summary = "신고하기", description = "Idempotency-Key 필수. 부원당 분당 5회. 사유 1–200자(앞뒤 공백 제외). "
-            + "지금은 QUESTION · ANSWER만(나머지 400). 대상이 없거나 지워졌으면 404, 같은 대상을 이미 신고했으면 409. "
+            + "지금은 QUESTION · ANSWER · NOTICE_COMMENT만(나머지 400). 대상이 없거나 지워졌으면 404, 같은 대상을 이미 신고했으면 409. "
             + "작성자에게 알리지 않는다.")
     @Idempotent
     @RateLimit(limit = 5)

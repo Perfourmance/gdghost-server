@@ -33,7 +33,14 @@ public record NoticeDetail(
     public record Comment(long id, CommentAuthor author, String body, boolean mine, Instant createdAt) {
     }
 
+    /** 탈퇴했으면 id · 기수 없이 '탈퇴한 부원' */
     public record CommentAuthor(Long id, String nickname, Integer generation, boolean withdrawn) {
+
+        static CommentAuthor of(long id, String nickname, Integer generation, boolean withdrawn) {
+            return withdrawn ? new CommentAuthor(null, Author.WITHDRAWN_NICKNAME, null, true)
+                    : new CommentAuthor(id, nickname, generation, false);
+        }
+
     }
 
 }

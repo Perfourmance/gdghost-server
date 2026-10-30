@@ -136,6 +136,20 @@ public class Fixtures {
                 .longValue();
     }
 
+    /** 공지 댓글 (본문 '공지 댓글 N') */
+    public long noticeComment(long noticeId, long authorId) {
+        int n = SEQUENCE.incrementAndGet();
+        return new SimpleJdbcInsert(jdbc)
+                .withTableName("notice_comment")
+                .usingColumns("notice_id", "author_id", "body")
+                .usingGeneratedKeyColumns("id")
+                .executeAndReturnKey(Map.of(
+                        "notice_id", noticeId,
+                        "author_id", authorId,
+                        "body", "공지 댓글 " + n))
+                .longValue();
+    }
+
     /** OPEN 신고 (사유 '신고 사유') */
     public long report(long reporterId, String targetType, long targetId) {
         return new SimpleJdbcInsert(jdbc)
