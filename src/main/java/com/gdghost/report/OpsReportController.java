@@ -32,7 +32,7 @@ public class OpsReportController {
     }
 
     @Operation(summary = "신고 목록", description = "미처리(OPEN)가 위로, 그 안에서 최신순. state가 없으면 전체. "
-            + "대상 작성자는 담지 않는다. targetPreview는 질문 제목 · 답변 본문 앞 50자(지운 글도), "
+            + "대상 작성자는 담지 않는다. targetPreview는 질문 제목 · 답변 · 공지 댓글 본문 앞 50자(지운 글도), "
             + "targetDeletedBy(null · AUTHOR · STAFF)로 되돌리기 가능 여부를 본다. sameTargetCount는 이 신고 포함.")
     @GetMapping
     public OpsPage<OpsReportResponse> list(@RequestParam(required = false) ReportState state,

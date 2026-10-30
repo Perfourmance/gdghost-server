@@ -27,14 +27,16 @@ public class NoticeService {
     private final NoticeDetailReader detailReader;
     private final NoticeStatsReader statsReader;
     private final NoticeReadWriter readWriter;
+    private final NoticeCommentReader commentReader;
     private final Clock clock;
 
     public NoticeService(NoticeListReader listReader, NoticeDetailReader detailReader, NoticeStatsReader statsReader,
-            NoticeReadWriter readWriter, Clock clock) {
+            NoticeReadWriter readWriter, NoticeCommentReader commentReader, Clock clock) {
         this.listReader = listReader;
         this.detailReader = detailReader;
         this.statsReader = statsReader;
         this.readWriter = readWriter;
+        this.commentReader = commentReader;
         this.clock = clock;
     }
 
@@ -90,10 +92,10 @@ public class NoticeService {
         return detail(find(noticeId), viewer);
     }
 
-    // TODO 댓글(#44)
     private NoticeDetail detail(NoticeDetailReader.Row row, AuthMember viewer) {
         return new NoticeDetail(row.id(), row.title(), row.body(), row.pinned(), row.mustRead(), row.dueDate(),
-                row.author(), row.createdAt(), detailReader.confirmedAt(row.id(), viewer.id()) != null, List.of(),
+                row.author(), row.createdAt(), detailReader.confirmedAt(row.id(), viewer.id()) != null,
+                commentReader.list(row.id(), viewer.id()),
                 viewer.role() == Role.MEMBER ? null : statsReader.stats(row.id()));
     }
 

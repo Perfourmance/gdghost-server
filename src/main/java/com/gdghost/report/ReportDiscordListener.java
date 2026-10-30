@@ -7,6 +7,7 @@ import com.gdghost.common.discord.DiscordChannel;
 import com.gdghost.common.discord.DiscordMessage;
 import com.gdghost.common.discord.DiscordNotifier;
 import com.gdghost.common.event.DomainEventListener;
+import com.gdghost.notice.NoticeCommentModeration;
 import com.gdghost.question.AnswerRepository;
 
 /** 신고 접수 → 운영진 서버. 대상 종류 · 사유 · 링크, 신고자는 보내지 않는다 */
@@ -15,13 +16,15 @@ public class ReportDiscordListener {
 
     private final ReportRepository reports;
     private final AnswerRepository answers;
+    private final NoticeCommentModeration noticeComments;
     private final DiscordNotifier discord;
     private final String webUrl;
 
-    public ReportDiscordListener(ReportRepository reports, AnswerRepository answers, DiscordNotifier discord,
-            @Value("${web.url}") String webUrl) {
+    public ReportDiscordListener(ReportRepository reports, AnswerRepository answers,
+            NoticeCommentModeration noticeComments, DiscordNotifier discord, @Value("${web.url}") String webUrl) {
         this.reports = reports;
         this.answers = answers;
+        this.noticeComments = noticeComments;
         this.discord = discord;
         this.webUrl = webUrl;
     }
@@ -39,6 +42,9 @@ public class ReportDiscordListener {
             case QUESTION -> webUrl + "/questions/" + id;
             case ANSWER -> answers.findQuestionId(id)
                     .map(questionId -> webUrl + "/questions/" + questionId + "#answer-" + id)
+                    .orElse(null);
+            case NOTICE_COMMENT -> noticeComments.noticeId(id)
+                    .map(noticeId -> webUrl + "/notices/" + noticeId + "#comment-" + id)
                     .orElse(null);
             default -> null;
         };
