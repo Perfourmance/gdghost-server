@@ -18,7 +18,7 @@ class QuestionNotifier {
 
     void questionCreated(Question question) {
         notifications.toAllExcept(question.getAuthorId(), NotificationType.NEW_QUESTION, "새 질문이 올라왔어요",
-                question.getTitle(), NotificationTarget.question(question.getId()));
+                question.getTitle(), NotificationTarget.question(question.getId()), false);
     }
 
     /** 자기 글에 단 것은 알리지 않는다. 질문자가 부모 작성자이기도 하면 답글 알림 하나만 */

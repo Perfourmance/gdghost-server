@@ -47,11 +47,13 @@ class SwaggerIntegrationTest {
     @Nested
     @IntegrationTest
     @TestPropertySource(properties = {
-            // prod 설정 파일의 ${DB_*} · ${MAIL_*} · ${DISCORD_*} 자리 채우기. 실제 DB 연결은 Testcontainers가 덮어쓴다
+            // prod 설정 파일의 ${DB_*} · ${MAIL_*} · ${DISCORD_*} · ${VAPID_*} 자리 채우기. 실제 DB 연결은 Testcontainers가 덮어쓴다
             "DB_URL=jdbc:mysql://unused", "DB_USERNAME=unused", "DB_PASSWORD=unused",
             "MAIL_USERNAME=unused", "MAIL_PASSWORD=unused", "WEB_URL=https://unused",
             "DISCORD_MEMBER_WEBHOOK_URL=https://unused", "DISCORD_STAFF_WEBHOOK_URL=https://unused",
             "DISCORD_DEV_WEBHOOK_URL=https://unused",
+            "VAPID_PUBLIC_KEY=BP4z9KsN6nGRTbVYI_c7VJSPQTBtkgcy27mlmlMoZIIgDll6e3vCYLocInmYWAmS6TlzAC8wEqKK6PBru3jl7A8",
+            "VAPID_PRIVATE_KEY=yfWPiYE-n46HLnH0KqZOF1fJJU3MYrct3AELtAQ-oRw",
     })
     @ActiveProfiles("prod")
     class 운영_환경 {

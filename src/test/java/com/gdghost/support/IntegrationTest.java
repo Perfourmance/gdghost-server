@@ -20,7 +20,8 @@ import com.gdghost.TestcontainersConfiguration;
 @Retention(RetentionPolicy.RUNTIME)
 @SpringBootTest
 @AutoConfigureMockMvc
-@Import({TestcontainersConfiguration.class, Fixtures.class, FakeMailGateway.class, FakeDiscordGateway.class})
+@Import({TestcontainersConfiguration.class, Fixtures.class, FakeMailGateway.class, FakeDiscordGateway.class,
+        FakePushGateway.class})
 @ExtendWith(DatabaseCleaner.class)
 public @interface IntegrationTest {
 }
