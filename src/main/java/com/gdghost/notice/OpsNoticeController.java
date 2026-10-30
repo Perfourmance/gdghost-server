@@ -32,9 +32,11 @@ import jakarta.validation.constraints.Min;
 public class OpsNoticeController {
 
     private final OpsNoticeService opsNoticeService;
+    private final NoticeReminderService reminderService;
 
-    public OpsNoticeController(OpsNoticeService opsNoticeService) {
+    public OpsNoticeController(OpsNoticeService opsNoticeService, NoticeReminderService reminderService) {
         this.opsNoticeService = opsNoticeService;
+        this.reminderService = reminderService;
     }
 
     @Operation(summary = "공지 작성", description = "Idempotency-Key 필수. isPinned 기본 true · isMustRead 기본 false, "
@@ -46,6 +48,13 @@ public class OpsNoticeController {
             @RequestBody @Valid NoticeCreateRequest request) {
         NoticeDetail notice = opsNoticeService.create(me, request);
         return ResponseEntity.created(URI.create("/api/v1/notices/" + notice.id())).body(notice);
+    }
+
+    @Operation(summary = "미확인 공지 재알림", description = "확인했어요를 누르지 않은 활동 중 부원에게 앱 내 알림 + 웹 푸시. "
+            + "공지당 1회(이미 보냈으면 409), 지운 공지는 404. 22–08시(KST)면 푸시만 08시로 미룬다. 디스코드는 쓰지 않는다.")
+    @PostMapping("/{noticeId}/reminders")
+    public ResponseEntity<NoticeReminderResponse> remind(@PathVariable long noticeId) {
+        return ResponseEntity.accepted().body(reminderService.remind(noticeId));
     }
 
     @Operation(summary = "운영 공지 목록", description = "최신순, 지운 공지 제외. 본문은 담지 않는다. "

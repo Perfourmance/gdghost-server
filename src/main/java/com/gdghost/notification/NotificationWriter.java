@@ -37,7 +37,7 @@ public class NotificationWriter {
                 FROM member
                 WHERE id = :memberId AND withdrawn_at IS NULL AND suspended_at IS NULL
                 """, params(type, title, body, target).addValue("memberId", memberId));
-        events.publishEvent(new NotificationPushEvent(memberId, null, type, title, body, target));
+        events.publishEvent(NotificationPushEvent.to(List.of(memberId), type, title, body, target));
     }
 
     /**
@@ -55,7 +55,29 @@ public class NotificationWriter {
                 WHERE id <> :excludedId AND withdrawn_at IS NULL AND suspended_at IS NULL
                 """, params(type, title, body, target).addValue("excludedId", excludedId));
         if (push) {
-            events.publishEvent(new NotificationPushEvent(null, excludedId, type, title, body, target));
+            events.publishEvent(NotificationPushEvent.toAllExcept(excludedId, type, title, body, target));
+        }
+    }
+
+    /**
+     * 정해진 사람들 — 재알림처럼 대상을 따로 고른 경우.
+     *
+     * @param push false면 앱 내 알림만. 푸시를 미룰 때
+     */
+    public void toMembers(List<Long> memberIds, NotificationType type, String title, String body,
+            NotificationTarget target, boolean push) {
+        if (memberIds.isEmpty()) {
+            return;
+        }
+        jdbc.update("""
+                INSERT INTO notification (member_id, type, title, body, target_type, target_id,
+                                          sub_target_type, sub_target_id, created_at)
+                SELECT id, :type, :title, :body, :targetType, :targetId, :subType, :subId, :now
+                FROM member
+                WHERE id IN (:memberIds) AND withdrawn_at IS NULL AND suspended_at IS NULL
+                """, params(type, title, body, target).addValue("memberIds", memberIds));
+        if (push) {
+            events.publishEvent(NotificationPushEvent.to(memberIds, type, title, body, target));
         }
     }
 
