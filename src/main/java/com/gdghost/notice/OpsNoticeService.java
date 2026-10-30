@@ -14,7 +14,6 @@ import com.gdghost.common.error.ErrorCode;
 import com.gdghost.common.error.ErrorField;
 import com.gdghost.common.page.OpsPage;
 import com.gdghost.common.security.AuthMember;
-import com.gdghost.common.security.Role;
 
 /** 운영진의 공지 작성 · 목록 · 수정 · 삭제. 다른 운영진이 쓴 공지도 고치고 지울 수 있다 (인계 대비) */
 @Service
@@ -24,18 +23,16 @@ public class OpsNoticeService {
 
     private final NoticeRepository notices;
     private final NoticeReadWriter readWriter;
-    private final NoticeDetailReader detailReader;
-    private final NoticeStatsReader statsReader;
+    private final NoticeService noticeService;
     private final OpsNoticeReader opsReader;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
-    public OpsNoticeService(NoticeRepository notices, NoticeReadWriter readWriter, NoticeDetailReader detailReader,
-            NoticeStatsReader statsReader, OpsNoticeReader opsReader, ApplicationEventPublisher events, Clock clock) {
+    public OpsNoticeService(NoticeRepository notices, NoticeReadWriter readWriter, NoticeService noticeService,
+            OpsNoticeReader opsReader, ApplicationEventPublisher events, Clock clock) {
         this.notices = notices;
         this.readWriter = readWriter;
-        this.detailReader = detailReader;
-        this.statsReader = statsReader;
+        this.noticeService = noticeService;
         this.opsReader = opsReader;
         this.events = events;
         this.clock = clock;
@@ -49,7 +46,7 @@ public class OpsNoticeService {
                 request.mustRead(), request.dueDate(), clock.instant()));
         readWriter.confirm(notice.getId(), me.id(), clock.instant());
         events.publishEvent(new NoticeCreatedEvent(notice.getId()));
-        return detail(notice.getId(), me);
+        return noticeService.detail(notice.getId(), me);
     }
 
     @Transactional(readOnly = true)
@@ -64,7 +61,7 @@ public class OpsNoticeService {
         notice.edit(request.title(), request.body(), request.isPinned(), request.isMustRead(), request.dueDate(),
                 request.clearingDueDate(), clock.instant());
         notices.flush();
-        return detail(noticeId, me);
+        return noticeService.detail(noticeId, me);
     }
 
     /** 이미 디스코드에 올라간 메시지는 그대로 (웹훅은 보내기만 한다) */
@@ -85,15 +82,6 @@ public class OpsNoticeService {
         return notices.findById(noticeId)
                 .filter(notice -> !notice.isDeleted())
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "공지를 찾을 수 없습니다."));
-    }
-
-    // TODO 댓글(#44)
-    private NoticeDetail detail(long noticeId, AuthMember viewer) {
-        NoticeDetailReader.Row row = detailReader.find(noticeId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "공지를 찾을 수 없습니다."));
-        return new NoticeDetail(row.id(), row.title(), row.body(), row.pinned(), row.mustRead(), row.dueDate(),
-                row.author(), row.createdAt(), detailReader.confirmed(noticeId, viewer.id()), List.of(),
-                viewer.role() == Role.MEMBER ? null : statsReader.stats(noticeId));
     }
 
 }
