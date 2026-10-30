@@ -52,16 +52,19 @@ public class PushSubscriptionRepository {
                 Map.of("hash", TokenHasher.sha256(endpoint)));
     }
 
-    /** 푸시를 켠 활동 중 부원의 구독. memberId가 있으면 그 사람만, 없으면 excludedId를 뺀 전체 */
-    List<PushTarget> targets(Long memberId, Long excludedId) {
+    /** 푸시를 켠 활동 중 부원의 구독. memberIds가 있으면 그 사람들만, 없으면 excludedId를 뺀 전체 */
+    List<PushTarget> targets(List<Long> memberIds, Long excludedId) {
+        if (memberIds != null && memberIds.isEmpty()) {
+            return List.of();
+        }
+        String who = memberIds != null ? "m.id IN (:memberIds)" : "m.id <> :excludedId";
         return jdbc.query("""
                 SELECT s.endpoint, s.p256dh, s.auth
                 FROM push_subscription s
                 JOIN member m ON m.id = s.member_id
-                WHERE m.push_on = TRUE AND m.withdrawn_at IS NULL AND m.suspended_at IS NULL
-                  AND (:memberId IS NULL OR m.id = :memberId)
-                  AND (:excludedId IS NULL OR m.id <> :excludedId)
-                """, new MapSqlParameterSource().addValue("memberId", memberId).addValue("excludedId", excludedId),
+                WHERE m.push_on = TRUE AND m.withdrawn_at IS NULL AND m.suspended_at IS NULL AND
+                """ + who, new MapSqlParameterSource().addValue("memberIds", memberIds)
+                .addValue("excludedId", excludedId),
                 (rs, i) -> new PushTarget(rs.getString("endpoint"), rs.getString("p256dh"), rs.getString("auth")));
     }
 

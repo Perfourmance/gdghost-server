@@ -40,6 +40,17 @@ class SchedulingEnabledTest {
     }
 
     @Test
+    void 재알림_푸시가_매일_08시_KST로_등록된다() {
+        assertThat(tasks.getScheduledTasks())
+                .map(scheduled -> scheduled.getTask())
+                .filteredOn(CronTask.class::isInstance)
+                .map(CronTask.class::cast)
+                .filteredOn(task -> task.toString().contains("NoticeReminderPushJob.run"))
+                .singleElement()
+                .satisfies(task -> assertThat(task.getExpression()).isEqualTo("0 0 8 * * *"));
+    }
+
+    @Test
     void 비동기_리스너는_계속_async_스레드에서_돈다() {
         assertThat(probe.threadName().join()).startsWith("async-");
     }
