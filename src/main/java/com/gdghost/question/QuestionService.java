@@ -22,22 +22,24 @@ public class QuestionService {
     private final QuestionListReader listReader;
     private final QuestionDetailReader detailReader;
     private final QuestionViewCounter viewCounter;
+    private final QuestionNotifier notifier;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public QuestionService(QuestionRepository questions, QuestionAnonAliasWriter aliasWriter,
             QuestionListReader listReader, QuestionDetailReader detailReader, QuestionViewCounter viewCounter,
-            ApplicationEventPublisher events, Clock clock) {
+            QuestionNotifier notifier, ApplicationEventPublisher events, Clock clock) {
         this.questions = questions;
         this.aliasWriter = aliasWriter;
         this.listReader = listReader;
         this.detailReader = detailReader;
         this.viewCounter = viewCounter;
+        this.notifier = notifier;
         this.events = events;
         this.clock = clock;
     }
 
-    // TODO 전체 앱 내 알림(6) · 임베딩 · 선배 지목(7)
+    // TODO 임베딩 · 선배 지목(7)
     @Transactional
     public QuestionCreatedResponse create(long authorId, QuestionCreateRequest request) {
         Question question = questions.save(Question.write(authorId, request.category(), request.title(),
@@ -45,6 +47,7 @@ public class QuestionService {
         if (question.isAnonymous()) {
             aliasWriter.assignAuthor(question.getId(), authorId);
         }
+        notifier.questionCreated(question);
         events.publishEvent(new QuestionCreatedEvent(question.getId()));
         return new QuestionCreatedResponse(detail(find(question.getId()), authorId), null);
     }

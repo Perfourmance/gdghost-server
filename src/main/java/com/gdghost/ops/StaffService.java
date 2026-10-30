@@ -14,6 +14,9 @@ import com.gdghost.common.error.BusinessException;
 import com.gdghost.common.error.ErrorCode;
 import com.gdghost.member.Member;
 import com.gdghost.member.MemberRepository;
+import com.gdghost.notification.NotificationTarget;
+import com.gdghost.notification.NotificationType;
+import com.gdghost.notification.NotificationWriter;
 
 /**
  * 운영진 지정. 첫 운영진(어드민)과 운영진끼리의 지정(10단계)이 같이 쓴다.
@@ -23,13 +26,15 @@ public class StaffService {
 
     private final MemberRepository members;
     private final OpsAuditLogger opsAudit;
+    private final NotificationWriter notifications;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
-    public StaffService(MemberRepository members, OpsAuditLogger opsAudit, ApplicationEventPublisher events,
-            Clock clock) {
+    public StaffService(MemberRepository members, OpsAuditLogger opsAudit, NotificationWriter notifications,
+            ApplicationEventPublisher events, Clock clock) {
         this.members = members;
         this.opsAudit = opsAudit;
+        this.notifications = notifications;
         this.events = events;
         this.clock = clock;
     }
@@ -42,6 +47,8 @@ public class StaffService {
         opsAudit.record(OpsAudit.of(actorId, OpsAction.STAFF_ASSIGN)
                 .targetMember(memberId)
                 .detail(Map.of("staffTitle", staffTitle)));
+        notifications.toMember(memberId, NotificationType.STAFF_ROLE_CHANGED, "운영진으로 지정됐어요", staffTitle,
+                NotificationTarget.settings(memberId));
         events.publishEvent(new StaffRoleChangedEvent(actorId, memberId));
         return StaffResponse.from(member);
     }
