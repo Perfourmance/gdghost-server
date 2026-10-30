@@ -21,12 +21,21 @@ public class MailQuota {
 
     private final Clock clock;
     private final int dailyLimit;
+    private final Runnable onLimitReached;
     private LocalDate day;
     private int used;
+    private boolean reported;
 
     public MailQuota(Clock clock, int dailyLimit) {
+        this(clock, dailyLimit, () -> {
+        });
+    }
+
+    /** @param onLimitReached 그날 처음 한도에 막혔을 때 한 번 (개발자 디스코드) */
+    public MailQuota(Clock clock, int dailyLimit, Runnable onLimitReached) {
         this.clock = clock;
         this.dailyLimit = dailyLimit;
+        this.onLimitReached = onLimitReached;
     }
 
     /** 한 통 몫을 쓴다. 다 썼으면 503 MAIL_QUOTA_EXCEEDED */
@@ -35,9 +44,14 @@ public class MailQuota {
         if (!today.equals(day)) {
             day = today;
             used = 0;
+            reported = false;
         }
         if (used >= dailyLimit) {
             log.warn("오늘 메일 발송 한도({}통) 도달", dailyLimit);
+            if (!reported) {
+                reported = true;
+                onLimitReached.run();
+            }
             throw new BusinessException(ErrorCode.MAIL_QUOTA_EXCEEDED);
         }
         used++;

@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,13 +38,14 @@ public class StaffEmailChangeService {
     private final OpsAuditLogger opsAudit;
     private final LoginTokenService loginTokens;
     private final MailService mailService;
+    private final ApplicationEventPublisher events;
     private final Clock clock;
     private final String webUrl;
 
     public StaffEmailChangeService(MemberRepository members, CurrentPasswords currentPasswords,
             EmailVerifier emailVerifier, EmailChangeRules rules, EmailChangeLogRepository changeLogs,
-            OpsAuditLogger opsAudit, LoginTokenService loginTokens, MailService mailService, Clock clock,
-            @Value("${web.url}") String webUrl) {
+            OpsAuditLogger opsAudit, LoginTokenService loginTokens, MailService mailService,
+            ApplicationEventPublisher events, Clock clock, @Value("${web.url}") String webUrl) {
         this.members = members;
         this.currentPasswords = currentPasswords;
         this.emailVerifier = emailVerifier;
@@ -52,6 +54,7 @@ public class StaffEmailChangeService {
         this.opsAudit = opsAudit;
         this.loginTokens = loginTokens;
         this.mailService = mailService;
+        this.events = events;
         this.clock = clock;
         this.webUrl = webUrl;
     }
@@ -84,11 +87,11 @@ public class StaffEmailChangeService {
         opsAudit.record(OpsAudit.of(staffId, OpsAction.EMAIL_CHANGE_REQUEST)
                 .targetMember(memberId)
                 .detail(Map.of("identityNote", request.identityNote().strip())));
+        events.publishEvent(new EmailChangeRequestedEvent(staffId, memberId));
         return new EmailChangeLinkSentResponse(expiresAt);
     }
 
     /** 반영 후 모든 기기 로그아웃 — 부원은 새 메일로 비밀번호를 재설정한다 */
-    // TODO 디스코드 기록(#45)
     @Transactional
     public void confirm(String token) {
         EmailVerification link = emailVerifier.useLink(VerificationPurpose.EMAIL_CHANGE_LINK, token);
@@ -102,9 +105,15 @@ public class StaffEmailChangeService {
 
         Instant now = clock.instant();
         rules.change(member, email, now);
-        changeLogs.findFirstByMemberIdAndNewEmailAndVerifiedAtIsNullOrderByIdDesc(member.getId(), email)
-                .ifPresent(log -> log.verify(now));
+        Long requesterId = changeLogs
+                .findFirstByMemberIdAndNewEmailAndVerifiedAtIsNullOrderByIdDesc(member.getId(), email)
+                .map(log -> {
+                    log.verify(now);
+                    return log.getChangedBy();
+                })
+                .orElse(null);
         loginTokens.revokeAll(member.getId());
+        events.publishEvent(new EmailChangedEvent(requesterId, member.getId()));
     }
 
 }

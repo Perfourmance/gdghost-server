@@ -11,6 +11,9 @@ import org.springframework.core.task.TaskExecutor;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.util.StringUtils;
 
+import com.gdghost.common.discord.DiscordChannel;
+import com.gdghost.common.discord.DiscordMessage;
+import com.gdghost.common.discord.DiscordNotifier;
 import com.gdghost.common.error.ErrorLogRecorder;
 import com.gdghost.common.mail.LogMailGateway;
 import com.gdghost.common.mail.MailGateway;
@@ -33,8 +36,10 @@ public class MailConfig {
     }
 
     @Bean
-    MailQuota mailQuota(Clock clock) {
-        return new MailQuota(clock, DAILY_LIMIT);
+    MailQuota mailQuota(Clock clock, DiscordNotifier discord) {
+        return new MailQuota(clock, DAILY_LIMIT, () -> discord.send(DiscordChannel.DEV,
+                new DiscordMessage("메일 하루 한도 도달", null,
+                        "오늘(한국 날짜) " + DAILY_LIMIT + "통을 다 써서 가입 · 재설정 · 이메일 변경 메일이 503으로 막힙니다.")));
     }
 
     @Bean

@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,20 +22,22 @@ public class QuestionService {
     private final QuestionListReader listReader;
     private final QuestionDetailReader detailReader;
     private final QuestionViewCounter viewCounter;
+    private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public QuestionService(QuestionRepository questions, QuestionAnonAliasWriter aliasWriter,
             QuestionListReader listReader, QuestionDetailReader detailReader, QuestionViewCounter viewCounter,
-            Clock clock) {
+            ApplicationEventPublisher events, Clock clock) {
         this.questions = questions;
         this.aliasWriter = aliasWriter;
         this.listReader = listReader;
         this.detailReader = detailReader;
         this.viewCounter = viewCounter;
+        this.events = events;
         this.clock = clock;
     }
 
-    // TODO 디스코드(5) · 전체 앱 내 알림(6) · 임베딩 · 선배 지목(7)
+    // TODO 전체 앱 내 알림(6) · 임베딩 · 선배 지목(7)
     @Transactional
     public QuestionCreatedResponse create(long authorId, QuestionCreateRequest request) {
         Question question = questions.save(Question.write(authorId, request.category(), request.title(),
@@ -42,6 +45,7 @@ public class QuestionService {
         if (question.isAnonymous()) {
             aliasWriter.assignAuthor(question.getId(), authorId);
         }
+        events.publishEvent(new QuestionCreatedEvent(question.getId()));
         return new QuestionCreatedResponse(detail(find(question.getId()), authorId), null);
     }
 
