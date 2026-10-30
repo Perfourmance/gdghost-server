@@ -36,11 +36,14 @@ public class NoticeDetailReader {
                 .stream().findFirst();
     }
 
-    boolean confirmed(long noticeId, long memberId) {
-        return Boolean.TRUE.equals(jdbc.queryForObject("""
-                SELECT EXISTS (SELECT 1 FROM notice_read
-                               WHERE notice_id = :noticeId AND member_id = :memberId AND confirmed_at IS NOT NULL)
-                """, Map.of("noticeId", noticeId, "memberId", memberId), Boolean.class));
+    /** @return 확인하지 않았으면 null */
+    Instant confirmedAt(long noticeId, long memberId) {
+        return jdbc.query("""
+                SELECT confirmed_at FROM notice_read
+                WHERE notice_id = :noticeId AND member_id = :memberId AND confirmed_at IS NOT NULL
+                """, Map.of("noticeId", noticeId, "memberId", memberId),
+                (rs, i) -> rs.getObject("confirmed_at", LocalDateTime.class).toInstant(ZoneOffset.UTC))
+                .stream().findFirst().orElse(null);
     }
 
     record Row(long id, String title, String body, boolean pinned, boolean mustRead, LocalDate dueDate,

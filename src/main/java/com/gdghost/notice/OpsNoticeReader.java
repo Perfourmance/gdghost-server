@@ -6,7 +6,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -22,10 +21,13 @@ public class OpsNoticeReader {
 
     private final NamedParameterJdbcTemplate jdbc;
     private final NoticeStatsReader statsReader;
+    private final NoticeListReader listReader;
 
-    public OpsNoticeReader(NamedParameterJdbcTemplate jdbc, NoticeStatsReader statsReader) {
+    public OpsNoticeReader(NamedParameterJdbcTemplate jdbc, NoticeStatsReader statsReader,
+            NoticeListReader listReader) {
         this.jdbc = jdbc;
         this.statsReader = statsReader;
+        this.listReader = listReader;
     }
 
     /** 최신순, 지운 공지 제외 */
@@ -45,29 +47,13 @@ public class OpsNoticeReader {
                 """, params, OpsNoticeReader::row);
         List<Long> ids = rows.stream().map(Row::id).toList();
         Map<Long, NoticeStats> stats = statsReader.stats(ids);
-        Map<Long, Long> commentCounts = commentCounts(ids);
+        Map<Long, Long> commentCounts = listReader.commentCounts(ids);
         List<OpsNoticeResponse> items = rows.stream()
                 .map(row -> new OpsNoticeResponse(row.id(), row.title(), row.pinned(), row.mustRead(),
                         row.dueDate(), row.author(), stats.get(row.id()), commentCounts.getOrDefault(row.id(), 0L),
                         row.remindedAt(), row.createdAt()))
                 .toList();
         return new OpsPage<>(items, page, size, total);
-    }
-
-    /** 지운 댓글은 세지 않는다 */
-    private Map<Long, Long> commentCounts(List<Long> ids) {
-        Map<Long, Long> counts = new HashMap<>();
-        if (ids.isEmpty()) {
-            return counts;
-        }
-        jdbc.query("""
-                SELECT notice_id, COUNT(*) AS n FROM notice_comment
-                WHERE notice_id IN (:ids) AND deleted_at IS NULL
-                GROUP BY notice_id
-                """, Map.of("ids", ids), rs -> {
-                    counts.put(rs.getLong("notice_id"), rs.getLong("n"));
-                });
-        return counts;
     }
 
     private static Row row(ResultSet rs, int n) throws SQLException {
