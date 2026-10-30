@@ -3,6 +3,7 @@ package com.gdghost.report;
 import java.time.Clock;
 import java.util.List;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,17 +21,18 @@ public class ReportService {
     private final ReportRepository reports;
     private final QuestionRepository questions;
     private final AnswerRepository answers;
+    private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public ReportService(ReportRepository reports, QuestionRepository questions, AnswerRepository answers,
-            Clock clock) {
+            ApplicationEventPublisher events, Clock clock) {
         this.reports = reports;
         this.questions = questions;
         this.answers = answers;
+        this.events = events;
         this.clock = clock;
     }
 
-    // TODO 커밋 후 운영진 디스코드 즉시 전송(5) — 대상 종류 · 사유 · 링크, 신고자 미표시
     @Transactional
     public ReportCreatedResponse create(long reporterId, ReportCreateRequest request) {
         ReportTargetType type = request.targetType();
@@ -47,6 +49,7 @@ public class ReportService {
         try {
             Report report = reports.saveAndFlush(
                     Report.open(reporterId, type, request.targetId(), request.reason(), clock.instant()));
+            events.publishEvent(new ReportCreatedEvent(report.getId()));
             return new ReportCreatedResponse(report.getId());
         } catch (DataIntegrityViolationException e) {
             throw alreadyReported();

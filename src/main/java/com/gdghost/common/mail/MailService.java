@@ -44,7 +44,7 @@ public class MailService {
         }
     }
 
-    // 실패는 error_log에 남긴다. 개발자 디스코드 알림은 디스코드 연동 때
+    // 실패는 error_log + 개발자 디스코드(ErrorLogRecorder)
     private void dispatch(Mail mail) {
         executor.execute(() -> {
             try {

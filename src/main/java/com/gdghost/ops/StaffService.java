@@ -3,6 +3,7 @@ package com.gdghost.ops;
 import java.time.Clock;
 import java.util.Map;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,15 +23,17 @@ public class StaffService {
 
     private final MemberRepository members;
     private final OpsAuditLogger opsAudit;
+    private final ApplicationEventPublisher events;
     private final Clock clock;
 
-    public StaffService(MemberRepository members, OpsAuditLogger opsAudit, Clock clock) {
+    public StaffService(MemberRepository members, OpsAuditLogger opsAudit, ApplicationEventPublisher events,
+            Clock clock) {
         this.members = members;
         this.opsAudit = opsAudit;
+        this.events = events;
         this.clock = clock;
     }
 
-    // TODO 디스코드 기록(#45)
     @Transactional
     public StaffResponse assign(long actorId, long memberId, String staffTitle) {
         Member member = members.findById(memberId)
@@ -39,6 +42,7 @@ public class StaffService {
         opsAudit.record(OpsAudit.of(actorId, OpsAction.STAFF_ASSIGN)
                 .targetMember(memberId)
                 .detail(Map.of("staffTitle", staffTitle)));
+        events.publishEvent(new StaffRoleChangedEvent(actorId, memberId));
         return StaffResponse.from(member);
     }
 

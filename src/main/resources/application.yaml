@@ -38,6 +38,12 @@ spring:
 web:                            # 프론트 주소. 메일 링크에 쓴다
   url: ${WEB_URL:http://localhost:3000}
 
+discord:                        # 웹훅 주소(비밀값). 비워 두면(로컬) 보내지 않고 서버 로그에 찍는다
+  webhook:
+    member: ${DISCORD_MEMBER_WEBHOOK_URL:}      # 기존 GDGoC 서버 #gdghost-알림
+    staff: ${DISCORD_STAFF_WEBHOOK_URL:}        # 운영진 서버
+    dev: ${DISCORD_DEV_WEBHOOK_URL:}            # 개발자 서버
+
 bootstrap:                      # 서비스 첫 시작용. 비워 두면 아무것도 하지 않는다
   invite-code: ${BOOTSTRAP_INVITE_CODE:}          # invite_code가 0건일 때만 이 값으로 코드 1개 (10회 · 7일)
   generation: ${BOOTSTRAP_GENERATION:}            # 위 코드의 기수

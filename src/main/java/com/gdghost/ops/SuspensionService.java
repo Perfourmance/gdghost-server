@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.Map;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,18 +27,20 @@ public class SuspensionService {
     private final MemberRepository members;
     private final LoginTokenService loginTokens;
     private final OpsAuditLogger opsAudit;
+    private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public SuspensionService(MemberRepository members, LoginTokenService loginTokens, OpsAuditLogger opsAudit,
-            Clock clock) {
+            ApplicationEventPublisher events, Clock clock) {
         this.members = members;
         this.loginTokens = loginTokens;
         this.opsAudit = opsAudit;
+        this.events = events;
         this.clock = clock;
     }
 
     /** 이미 정지된 부원이면 그대로 두고 지금 상태를 돌려준다 (멱등) */
-    // TODO 디스코드 기록(#45) · 보내지 않은 라우팅 후보 취소(라우팅 단계) · 응답 대기 커피챗 만료(커피챗 단계)
+    // TODO 보내지 않은 라우팅 후보 취소(라우팅 단계) · 응답 대기 커피챗 만료(커피챗 단계)
     @Transactional
     public SuspensionResponse suspend(long staffId, long memberId, String reason) {
         if (staffId == memberId) {
@@ -54,13 +57,13 @@ public class SuspensionService {
             opsAudit.record(OpsAudit.of(staffId, OpsAction.SUSPEND)
                     .targetMember(memberId)
                     .detail(Map.of("reason", trimmed)));
+            events.publishEvent(new MemberSuspendedEvent(staffId, memberId));
         }
         Member suspendedBy = members.findById(member.getSuspendedBy()).orElseThrow();
         return SuspensionResponse.of(member, suspendedBy);
     }
 
     /** 부원은 다시 로그인해야 한다 (정지 때 토큰을 지웠으므로) */
-    // TODO 디스코드 기록(#45)
     @Transactional
     public void unsuspend(long staffId, long memberId) {
         Member member = find(memberId);
@@ -70,6 +73,7 @@ public class SuspensionService {
         Instant now = clock.instant();
         member.unsuspend(now);
         opsAudit.record(OpsAudit.of(staffId, OpsAction.UNSUSPEND).targetMember(memberId));
+        events.publishEvent(new MemberUnsuspendedEvent(staffId, memberId));
     }
 
     private Member find(long memberId) {

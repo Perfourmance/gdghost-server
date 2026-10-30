@@ -11,6 +11,13 @@ spring:
 web:                            # 운영은 필수 — 없으면 기동 실패
   url: ${WEB_URL}
 
+discord:                        # 운영은 3개 모두 필수 — 없거나 https가 아니면 기동 실패
+  required: true
+  webhook:
+    member: ${DISCORD_MEMBER_WEBHOOK_URL}
+    staff: ${DISCORD_STAFF_WEBHOOK_URL}
+    dev: ${DISCORD_DEV_WEBHOOK_URL}
+
 springdoc:                      # 운영에서는 API 문서를 열지 않는다
   api-docs:
     enabled: false

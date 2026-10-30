@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 
@@ -38,6 +39,23 @@ class MailQuotaTest {
         clock.advance(Duration.ofMinutes(1));
 
         assertThatCode(quota::acquire).doesNotThrowAnyException();
+    }
+
+    @Test
+    void 한도에_막히면_그날_한_번만_알린다() {
+        MutableClock clock = new MutableClock(Instant.parse("2026-10-11T03:00:00Z"));
+        AtomicInteger alerts = new AtomicInteger();
+        MailQuota quota = new MailQuota(clock, 1, alerts::incrementAndGet);
+        quota.acquire();
+        assertThatThrownBy(quota::acquire).isInstanceOf(BusinessException.class);
+        assertThatThrownBy(quota::acquire).isInstanceOf(BusinessException.class);
+        assertThat(alerts).hasValue(1);
+
+        clock.advance(Duration.ofDays(1));
+        quota.acquire();
+        assertThatThrownBy(quota::acquire).isInstanceOf(BusinessException.class);
+
+        assertThat(alerts).hasValue(2);
     }
 
 }
