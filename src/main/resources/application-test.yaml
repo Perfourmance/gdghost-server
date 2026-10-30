@@ -5,3 +5,8 @@ spring:
 
 batch:
   scheduling-enabled: false     # 테스트는 배치 메서드를 직접 부른다
+
+push:                           # RFC 8291 부록의 공개된 예시 키. 테스트는 FakePushGateway로 보낸다
+  vapid:
+    public-key: BP4z9KsN6nGRTbVYI_c7VJSPQTBtkgcy27mlmlMoZIIgDll6e3vCYLocInmYWAmS6TlzAC8wEqKK6PBru3jl7A8
+    private-key: yfWPiYE-n46HLnH0KqZOF1fJJU3MYrct3AELtAQ-oRw

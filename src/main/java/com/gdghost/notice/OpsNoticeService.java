@@ -43,7 +43,7 @@ public class OpsNoticeService {
         this.clock = clock;
     }
 
-    /** 작성자는 바로 확인함. TODO 필독이면 웹 푸시(6) */
+    /** 작성자는 바로 확인함. 웹 푸시는 필독만 */
     @Transactional
     public NoticeDetail create(AuthMember me, NoticeCreateRequest request) {
         checkDueDate(request.dueDate());
@@ -52,7 +52,7 @@ public class OpsNoticeService {
         readWriter.confirm(notice.getId(), me.id(), clock.instant());
         notifications.toAllExcept(me.id(), NotificationType.NOTICE,
                 notice.isMustRead() ? "필독 공지가 올라왔어요" : "새 공지가 올라왔어요", notice.getTitle(),
-                NotificationTarget.notice(notice.getId()));
+                NotificationTarget.notice(notice.getId()), notice.isMustRead());
         events.publishEvent(new NoticeCreatedEvent(notice.getId()));
         return noticeService.detail(notice.getId(), me);
     }

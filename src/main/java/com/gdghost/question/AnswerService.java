@@ -38,7 +38,7 @@ public class AnswerService {
         this.clock = clock;
     }
 
-    // TODO 웹 푸시(6) · 지목된 routing ANSWERED(7)
+    // TODO 지목된 routing ANSWERED(7)
     @Transactional
     public AnswerNode create(long memberId, long questionId, AnswerCreateRequest request) {
         Instant now = clock.instant();

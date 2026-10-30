@@ -40,6 +40,11 @@ spring:
         await-termination: true
         await-termination-period: 10s
 
+push:                           # 웹 푸시 VAPID 키(비밀값). 비워 두면(로컬) 보내지 않고 서버 로그에 찍는다. 바꾸면 모든 구독이 무효
+  vapid:
+    public-key: ${VAPID_PUBLIC_KEY:}
+    private-key: ${VAPID_PRIVATE_KEY:}
+
 web:                            # 프론트 주소. 메일 링크에 쓴다
   url: ${WEB_URL:http://localhost:3000}
 

@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -12,18 +13,22 @@ import org.springframework.stereotype.Repository;
 /**
  * 알림 저장. 잃지 않게 알림을 만든 기능과 같은 트랜잭션에서 부른다 (커밋 후 리스너 X).
  * 받는 사람은 활동 중 부원만 — 탈퇴 · 정지한 사람에게는 쌓지 않는다.
+ * 웹 푸시는 커밋 후 리스너가 보내고, 트랜잭션이 롤백되면 나가지 않는다.
  */
 @Repository
 public class NotificationWriter {
 
     private final NamedParameterJdbcTemplate jdbc;
+    private final ApplicationEventPublisher events;
     private final Clock clock;
 
-    public NotificationWriter(NamedParameterJdbcTemplate jdbc, Clock clock) {
+    public NotificationWriter(NamedParameterJdbcTemplate jdbc, ApplicationEventPublisher events, Clock clock) {
         this.jdbc = jdbc;
+        this.events = events;
         this.clock = clock;
     }
 
+    /** 나에게 오는 알림 — 웹 푸시도 함께 */
     public void toMember(long memberId, NotificationType type, String title, String body, NotificationTarget target) {
         jdbc.update("""
                 INSERT INTO notification (member_id, type, title, body, target_type, target_id,
@@ -32,11 +37,16 @@ public class NotificationWriter {
                 FROM member
                 WHERE id = :memberId AND withdrawn_at IS NULL AND suspended_at IS NULL
                 """, params(type, title, body, target).addValue("memberId", memberId));
+        events.publishEvent(new NotificationPushEvent(memberId, null, type, title, body, target));
     }
 
-    /** 부원 전체 — INSERT … SELECT 한 번. 쓴 사람은 뺀다 */
+    /**
+     * 부원 전체 — INSERT … SELECT 한 번. 쓴 사람은 뺀다.
+     *
+     * @param push 필독 공지처럼 푸시까지 보낼 때만. 새 질문 같은 전체 알림은 false
+     */
     public void toAllExcept(long excludedId, NotificationType type, String title, String body,
-            NotificationTarget target) {
+            NotificationTarget target, boolean push) {
         jdbc.update("""
                 INSERT INTO notification (member_id, type, title, body, target_type, target_id,
                                           sub_target_type, sub_target_id, created_at)
@@ -44,6 +54,9 @@ public class NotificationWriter {
                 FROM member
                 WHERE id <> :excludedId AND withdrawn_at IS NULL AND suspended_at IS NULL
                 """, params(type, title, body, target).addValue("excludedId", excludedId));
+        if (push) {
+            events.publishEvent(new NotificationPushEvent(null, excludedId, type, title, body, target));
+        }
     }
 
     /** @return 실제로 읽음이 된 수. 남의 알림 id는 조용히 무시 */
