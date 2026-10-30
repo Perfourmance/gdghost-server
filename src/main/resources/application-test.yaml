@@ -2,3 +2,6 @@
 spring:
   jpa:
     show-sql: false
+
+batch:
+  scheduling-enabled: false     # 테스트는 배치 메서드를 직접 부른다

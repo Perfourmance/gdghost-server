@@ -34,6 +34,11 @@ spring:
       shutdown:
         await-termination: true   # 배포로 내려갈 때 돌던 리스너를 끝내고
         await-termination-period: 10s
+    scheduling:                 # @Scheduled 배치
+      thread-name-prefix: batch-
+      shutdown:
+        await-termination: true
+        await-termination-period: 10s
 
 web:                            # 프론트 주소. 메일 링크에 쓴다
   url: ${WEB_URL:http://localhost:3000}
