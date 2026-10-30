@@ -122,6 +122,20 @@ public class Fixtures {
                 .longValue();
     }
 
+    /** 공지 (제목 '공지 N'). 고정 · 필독 없이 상시 (DB 기본값) */
+    public long notice(long authorId) {
+        int n = SEQUENCE.incrementAndGet();
+        return new SimpleJdbcInsert(jdbc)
+                .withTableName("notice")
+                .usingColumns("author_id", "title", "body")
+                .usingGeneratedKeyColumns("id")
+                .executeAndReturnKey(Map.of(
+                        "author_id", authorId,
+                        "title", "공지 " + n,
+                        "body", "공지 본문 " + n))
+                .longValue();
+    }
+
     /** OPEN 신고 (사유 '신고 사유') */
     public long report(long reporterId, String targetType, long targetId) {
         return new SimpleJdbcInsert(jdbc)
