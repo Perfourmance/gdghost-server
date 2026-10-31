@@ -6,6 +6,9 @@ public interface RoutingPort {
     /** 질문과 같은 트랜잭션에서 지목 발송 */
     DirectDelivery direct(Question question, long targetMemberId);
 
+    /** 지목받은 사람이 답변(답글 제외)을 달면 ANSWERED. 답변과 같은 트랜잭션 */
+    void answered(long questionId, long memberId);
+
     /** 후보도 발송도 없으면 null */
     QuestionRouting view(long questionId, boolean anonymous, long viewerId);
 

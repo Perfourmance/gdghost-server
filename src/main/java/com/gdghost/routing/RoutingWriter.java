@@ -1,7 +1,6 @@
 package com.gdghost.routing;
 
 import java.math.BigDecimal;
-import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -19,40 +18,57 @@ public class RoutingWriter {
 
     private final JdbcTemplate jdbc;
     private final ObjectMapper json;
-    private final Clock clock;
 
-    public RoutingWriter(JdbcTemplate jdbc, ObjectMapper json, Clock clock) {
+    public RoutingWriter(JdbcTemplate jdbc, ObjectMapper json) {
         this.jdbc = jdbc;
         this.json = json;
-        this.clock = clock;
     }
 
-    /** 다시 계산할 때 쓴다. 지목(DIRECT) · 이미 보낸 것은 그대로 */
-    void deleteMemberCandidates(long questionId) {
-        jdbc.update("DELETE FROM routing WHERE question_id = ? AND stage = 'MEMBER' AND state = 'CANDIDATE'",
-                questionId);
-    }
-
-    void insertCandidates(long questionId, List<CandidateScorer.Scored> ranked, String version) {
-        LocalDateTime now = LocalDateTime.now(clock);
+    void insertMembers(long questionId, List<CandidateScorer.Scored> ranked, String version, Instant now) {
         for (int i = 0; i < ranked.size(); i++) {
             CandidateScorer.Scored scored = ranked.get(i);
             jdbc.update("""
-                    INSERT INTO routing (question_id, member_id, stage, rank_no, score, score_detail, state, created_at)
-                    VALUES (?, ?, 'MEMBER', ?, ?, ?, 'CANDIDATE', ?)
+                    INSERT INTO routing (question_id, member_id, stage, rank_no, score, score_detail, state,
+                                         sent_at, created_at)
+                    VALUES (?, ?, 'MEMBER', ?, ?, ?, 'SENT', ?, ?)
                     """, questionId, scored.memberId(), i + 1, BigDecimal.valueOf(scored.total()),
-                    detail(scored, version), now);
+                    detail(scored, version), utc(now), utc(now));
         }
     }
 
+    void insertStaff(long questionId, long memberId, Instant now) {
+        jdbc.update("""
+                INSERT INTO routing (question_id, member_id, stage, state, sent_at, created_at)
+                VALUES (?, ?, 'STAFF', 'SENT', ?, ?)
+                """, questionId, memberId, utc(now), utc(now));
+    }
+
     /** @param sentAt 22–08시면 null — CANDIDATE로 두고 08시에 보낸다 */
-    void insertDirect(long questionId, long memberId, Instant sentAt) {
+    void insertDirect(long questionId, long memberId, Instant sentAt, Instant now) {
         jdbc.update("""
                 INSERT INTO routing (question_id, member_id, stage, state, sent_at, created_at)
                 VALUES (?, ?, 'DIRECT', ?, ?, ?)
                 """, questionId, memberId, sentAt == null ? "CANDIDATE" : "SENT",
-                sentAt == null ? null : sentAt.atOffset(ZoneOffset.UTC).toLocalDateTime(),
-                LocalDateTime.now(clock));
+                sentAt == null ? null : utc(sentAt), utc(now));
+    }
+
+    void markSent(long routingId, Instant now) {
+        jdbc.update("UPDATE routing SET state = 'SENT', sent_at = ? WHERE id = ?", utc(now), routingId);
+    }
+
+    void cancel(long routingId, Instant now) {
+        jdbc.update("UPDATE routing SET state = 'CANCELED', responded_at = ? WHERE id = ?", utc(now), routingId);
+    }
+
+    void markAnswered(long questionId, long memberId, Instant now) {
+        jdbc.update("""
+                UPDATE routing SET state = 'ANSWERED', responded_at = ?
+                WHERE question_id = ? AND member_id = ? AND state = 'SENT' AND stage <> 'STAFF'
+                """, utc(now), questionId, memberId);
+    }
+
+    private static LocalDateTime utc(Instant instant) {
+        return instant.atOffset(ZoneOffset.UTC).toLocalDateTime();
     }
 
     private String detail(CandidateScorer.Scored scored, String version) {

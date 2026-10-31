@@ -1,6 +1,15 @@
 package com.gdghost.question;
 
-/** 취업·채용 · 커리어·이직 · 진로 고민 · 학교생활 · 기술·공부 */
 public enum QuestionCategory {
-    JOB, CAREER, PATH, CAMPUS, STUDY
+    JOB("취업·채용"), CAREER("커리어·이직"), PATH("진로 고민"), CAMPUS("학교생활"), STUDY("기술·공부");
+
+    private final String label;
+
+    QuestionCategory(String label) {
+        this.label = label;
+    }
+
+    public String label() {
+        return label;
+    }
 }

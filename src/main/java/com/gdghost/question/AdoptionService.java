@@ -21,7 +21,6 @@ public class AdoptionService {
         this.notifier = notifier;
     }
 
-    // TODO 라우팅 답변 이력 점수(7)
     @Transactional
     public AdoptionResponse adopt(long memberId, long questionId, long answerId) {
         Question question = myQuestion(memberId, questionId);

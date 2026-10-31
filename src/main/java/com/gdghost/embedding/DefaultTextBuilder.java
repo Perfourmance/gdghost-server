@@ -8,7 +8,6 @@ import org.springframework.stereotype.Component;
 
 import com.gdghost.member.MyProfileResponse.Interest;
 import com.gdghost.member.MyProfileResponse.TagItem;
-import com.gdghost.question.QuestionCategory;
 
 /** 부원이 입력한 값만 쓴다. 질문자 프로필은 넣지 않는다 (AI 매칭 설계 3 · 4장) */
 @Component
@@ -36,7 +35,7 @@ public class DefaultTextBuilder implements TextBuilder {
 
     @Override
     public String questionText(QuestionSource question) {
-        String head = label(question.category()) + " " + question.title();
+        String head = question.category().label() + " " + question.title();
         return question.body() == null ? head : head + "\n" + question.body();
     }
 
@@ -47,16 +46,6 @@ public class DefaultTextBuilder implements TextBuilder {
 
     private static String names(List<TagItem> tags) {
         return tags.stream().map(TagItem::name).collect(Collectors.joining(", "));
-    }
-
-    private static String label(QuestionCategory category) {
-        return switch (category) {
-            case JOB -> "취업·채용";
-            case CAREER -> "커리어·이직";
-            case PATH -> "진로 고민";
-            case CAMPUS -> "학교생활";
-            case STUDY -> "기술·공부";
-        };
     }
 
 }

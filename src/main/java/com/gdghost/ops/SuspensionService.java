@@ -40,7 +40,7 @@ public class SuspensionService {
     }
 
     /** 이미 정지된 부원이면 그대로 두고 지금 상태를 돌려준다 (멱등) */
-    // TODO 보내지 않은 라우팅 후보 취소(라우팅 단계) · 응답 대기 커피챗 만료(커피챗 단계)
+    // 보내지 않은 지목은 라우팅 배치가 보낼 때 취소한다. TODO 응답 대기 커피챗 만료(커피챗 단계)
     @Transactional
     public SuspensionResponse suspend(long staffId, long memberId, String reason) {
         if (staffId == memberId) {
