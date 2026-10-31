@@ -124,6 +124,16 @@ class EventReader {
                 EventReader::certification);
     }
 
+    CertificationRow certification(long certificationId) {
+        return jdbc.queryForObject("""
+                SELECT c.id, c.member_id, c.body, c.state, c.reject_reason, c.created_at,
+                       m.nickname, m.generation, m.role, m.withdrawn_at IS NOT NULL AS withdrawn
+                FROM certification c
+                JOIN member m ON m.id = c.member_id
+                WHERE c.id = :id
+                """, Map.of("id", certificationId), EventReader::certification);
+    }
+
     private static CertificationRow certification(ResultSet rs, int rowNum) throws SQLException {
         return new CertificationRow(rs.getLong("id"),
                 new AuthorRef.Row(rs.getLong("member_id"), rs.getString("nickname"), rs.getInt("generation"),
