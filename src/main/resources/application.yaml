@@ -49,6 +49,12 @@ embedding:                      # Workers AI 계정 ID · 토큰(비밀값). 비
   account-id: ${CLOUDFLARE_ACCOUNT_ID:}
   api-token: ${WORKERS_AI_API_TOKEN:}
 
+r2:                             # 사진 저장소(비밀값). 비워 두면(로컬) 업로드 API는 500, 사진 정리 배치는 건너뛴다
+  account-id: ${R2_ACCOUNT_ID:}
+  access-key-id: ${R2_ACCESS_KEY_ID:}
+  secret-access-key: ${R2_SECRET_ACCESS_KEY:}
+  bucket: ${R2_BUCKET:}
+
 matching:                       # 후보 계산 설정. AI팀이 조정한다. 값을 바꾸면 version을 올린다 (AI 매칭 설계 5장)
   version: 2026-10-v1
   weights: { rule: 0.4, profile: 0.3, history: 0.3 }
