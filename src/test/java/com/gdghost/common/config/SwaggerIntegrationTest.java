@@ -31,6 +31,14 @@ class SwaggerIntegrationTest {
         }
 
         @Test
+        void 멱등_API에는_Idempotency_Key_헤더가_문서에_있다() throws Exception {
+            mvc.perform(get("/v3/api-docs"))
+                    .andExpect(jsonPath("$.paths['/api/v1/questions'].post.parameters[0].name")
+                            .value("Idempotency-Key"))
+                    .andExpect(jsonPath("$.paths['/api/v1/questions'].post.parameters[0].required").value(true));
+        }
+
+        @Test
         void Swagger_화면이_로그인_없이_열린다() throws Exception {
             mvc.perform(get("/swagger-ui/index.html"))
                     .andExpect(status().isOk());
