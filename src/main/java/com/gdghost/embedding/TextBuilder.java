@@ -20,4 +20,7 @@ public interface TextBuilder {
 
     String questionText(QuestionSource question);
 
+    /** 선배 찾기 입력. 질문과 같은 방식으로 분류 + 분야 + 글 */
+    String searchText(QuestionCategory category, String interestName, String text);
+
 }

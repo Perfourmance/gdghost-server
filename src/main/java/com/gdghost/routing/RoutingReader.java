@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -37,19 +38,53 @@ public class RoutingReader {
     record Delivery(long memberId, String stage, String state, String nickname, String scoreDetail, Instant sentAt) {
     }
 
+    /** @param replacements 넘기기로 보충한 수. 보충은 rank_no가 없다 */
+    record Waiting(long id, int roundMembers, int passed, int replacements, int total) {
+
+        boolean isFirstRound() {
+            return roundMembers == 0;
+        }
+
+        /** 처음이면 정해진 인원, 그 뒤로는 넘긴 만큼만 — 무응답에는 더 보내지 않는다 */
+        int slots(MatchingConfig config) {
+            int wanted = isFirstRound() ? config.maxCandidates() : passed - replacements;
+            return Math.max(0, Math.min(wanted, config.maxPerQuestion() - total));
+        }
+    }
+
+    record SeniorCard(long id, String nickname, int generation, MemberStatus status, Position position,
+            String statusNote, boolean acceptCoffee) {
+    }
+
     record Scheduled(long id, long questionId, long memberId) {
     }
 
-    record Stale(long id, String title) {
+    record Stale(long id, String title, Instant createdAt) {
     }
 
-    private static final String WAITING = """
-            SELECT q.id FROM question q
-            WHERE q.state = 'WAITING' AND q.deleted_at IS NULL
-              AND q.created_at <= :before AND q.created_at > :after
-              AND NOT EXISTS (SELECT 1 FROM routing r WHERE r.question_id = q.id
-                              AND r.stage <> 'STAFF' AND r.state IN ('CANDIDATE', 'SENT', 'ANSWERED'))
+    /** 지목은 아직 안 보냈거나, 보낸 지 얼마 안 됐으면 그 선배를 기다린다 */
+    private static final String NO_ACTIVE_DIRECT = """
+              AND NOT EXISTS (SELECT 1 FROM routing d WHERE d.question_id = q.id AND d.stage = 'DIRECT'
+                              AND (d.state IN ('CANDIDATE', 'ANSWERED')
+                                   OR (d.state = 'SENT' AND d.sent_at > :directBefore)))
             """;
+
+    private static final String WAITING_COUNTS = """
+            SELECT q.id,
+                   COALESCE(SUM(r.stage = 'MEMBER'), 0) AS round_members,
+                   COALESCE(SUM(r.stage = 'MEMBER' AND r.state = 'PASSED'), 0) AS passed,
+                   COALESCE(SUM(r.stage = 'MEMBER' AND r.rank_no IS NULL), 0) AS replacements,
+                   COUNT(r.id) AS total
+            FROM question q
+            LEFT JOIN routing r ON r.question_id = q.id AND r.stage <> 'STAFF' AND r.state <> 'CANCELED'
+            WHERE q.state = 'WAITING' AND q.deleted_at IS NULL
+              AND q.created_at <= :before AND q.created_at > :after %s
+            """ + NO_ACTIVE_DIRECT + """
+            GROUP BY q.id ORDER BY q.id
+            """;
+
+    private static final RowMapper<Waiting> WAITING_ROW = (rs, i) -> new Waiting(rs.getLong("id"),
+            rs.getInt("round_members"), rs.getInt("passed"), rs.getInt("replacements"), rs.getInt("total"));
 
     private final NamedParameterJdbcTemplate jdbc;
     private final EmbeddingStore embeddings;
@@ -178,17 +213,26 @@ public class RoutingReader {
         return counts;
     }
 
-    /** 답을 기다리는 질문 중 부원 · 지목 전달이 진행 중이 아닌 것. 3일이 지나면 운영진 목록으로 넘어간다 */
-    List<Long> waitingForMembers(Instant createdBefore, Instant createdAfter) {
-        return jdbc.queryForList(WAITING + " ORDER BY q.id", window(createdBefore, createdAfter), Long.class);
+    /** 답을 기다리고 지목이 진행 중이 아닌 질문. 3일이 지나면 운영진 목록으로 넘어간다 */
+    List<Waiting> waitingForMembers(Instant createdBefore, Instant createdAfter, Instant directBefore) {
+        return jdbc.query(WAITING_COUNTS.formatted(""), window(createdBefore, createdAfter, directBefore), WAITING_ROW);
+    }
+
+    Optional<Waiting> waitingForMembers(long questionId, Instant createdBefore, Instant createdAfter,
+            Instant directBefore) {
+        return jdbc.query(WAITING_COUNTS.formatted("AND q.id = :question"),
+                window(createdBefore, createdAfter, directBefore).addValue("question", questionId), WAITING_ROW)
+                .stream().findFirst();
     }
 
     /** 위 조건 + 운영진에게 아직 알리지 않은 것 */
-    List<Long> waitingForStaff(Instant createdBefore, Instant createdAfter) {
-        return jdbc.queryForList(WAITING + """
-                 AND NOT EXISTS (SELECT 1 FROM routing r WHERE r.question_id = q.id AND r.stage = 'STAFF')
-                ORDER BY q.id
-                """, window(createdBefore, createdAfter), Long.class);
+    List<Long> waitingForStaff(Instant createdBefore, Instant createdAfter, Instant directBefore) {
+        return jdbc.queryForList("""
+                SELECT q.id FROM question q
+                WHERE q.state = 'WAITING' AND q.deleted_at IS NULL
+                  AND q.created_at <= :before AND q.created_at > :after
+                  AND NOT EXISTS (SELECT 1 FROM routing r WHERE r.question_id = q.id AND r.stage = 'STAFF')
+                """ + NO_ACTIVE_DIRECT + " ORDER BY q.id", window(createdBefore, createdAfter, directBefore), Long.class);
     }
 
     /** 22–08시에 지목돼 보내지 않은 것 */
@@ -208,16 +252,70 @@ public class RoutingReader {
                 """, Map.of(), Long.class).stream().findFirst();
     }
 
-    List<Stale> staleQuestions(Instant createdBefore) {
-        return jdbc.query("""
-                SELECT id, title FROM question
-                WHERE state = 'WAITING' AND deleted_at IS NULL AND created_at <= :before
-                ORDER BY id
-                """, Map.of("before", utc(createdBefore)), (rs, i) -> new Stale(rs.getLong("id"), rs.getString("title")));
+    /** 내가 지목받아 아직 반응하지 않은 행 */
+    Optional<Long> mySentRouting(long questionId, long memberId) {
+        return jdbc.queryForList("""
+                SELECT id FROM routing
+                WHERE question_id = :question AND member_id = :member AND state = 'SENT' AND stage <> 'STAFF'
+                """, Map.of("question", questionId, "member", memberId), Long.class).stream().findFirst();
     }
 
-    private static MapSqlParameterSource window(Instant createdBefore, Instant createdAfter) {
-        return new MapSqlParameterSource("before", utc(createdBefore)).addValue("after", utc(createdAfter));
+    List<Stale> staleQuestions(Instant createdBefore) {
+        return jdbc.query("""
+                SELECT id, title, created_at FROM question
+                WHERE state = 'WAITING' AND deleted_at IS NULL AND created_at <= :before
+                ORDER BY id
+                """, Map.of("before", utc(createdBefore)), (rs, i) -> new Stale(rs.getLong("id"), rs.getString("title"),
+                instant(rs, "created_at")));
+    }
+
+    private static MapSqlParameterSource window(Instant createdBefore, Instant createdAfter, Instant directBefore) {
+        return new MapSqlParameterSource("before", utc(createdBefore)).addValue("after", utc(createdAfter))
+                .addValue("directBefore", utc(directBefore));
+    }
+
+    /** INTEREST 태그가 아니면 비어 있다 */
+    Optional<String> interestName(long tagId) {
+        return jdbc.queryForList("SELECT name FROM tag WHERE id = :id AND kind = 'INTEREST'", Map.of("id", tagId),
+                String.class).stream().findFirst();
+    }
+
+    /** 그 분야를 고른 부원의 사유 문구. "백엔드 · Spring"처럼 세부 기술이 있으면 첫 번째를 붙인다 */
+    Map<Long, String> matchedInterests(List<Long> memberIds, long interestTagId, String interestName) {
+        Map<Long, String> labels = new HashMap<>();
+        if (memberIds.isEmpty()) {
+            return labels;
+        }
+        jdbc.query("""
+                SELECT mt.member_id, t.kind, t.name FROM member_tag mt JOIN tag t ON t.id = mt.tag_id
+                WHERE mt.member_id IN (:ids) AND (t.id = :tag OR t.parent_id = :tag)
+                ORDER BY t.kind = 'SKILL', t.sort_order, t.id
+                """, new MapSqlParameterSource("ids", memberIds).addValue("tag", interestTagId), rs -> {
+            long member = rs.getLong("member_id");
+            if ("INTEREST".equals(rs.getString("kind"))) {
+                labels.put(member, interestName);
+            } else if (interestName.equals(labels.get(member))) {
+                labels.put(member, interestName + " · " + rs.getString("name"));
+            }
+        });
+        return labels;
+    }
+
+    Map<Long, SeniorCard> seniorCards(List<Long> memberIds) {
+        Map<Long, SeniorCard> cards = new HashMap<>();
+        if (memberIds.isEmpty()) {
+            return cards;
+        }
+        jdbc.query("""
+                SELECT id, nickname, generation, status, position, status_note, accept_coffee
+                FROM member WHERE id IN (:ids)
+                """, Map.of("ids", memberIds), rs -> {
+            cards.put(rs.getLong("id"), new SeniorCard(rs.getLong("id"), rs.getString("nickname"),
+                    rs.getInt("generation"), MemberStatus.valueOf(rs.getString("status")),
+                    Position.valueOf(rs.getString("position")), rs.getString("status_note"),
+                    rs.getBoolean("accept_coffee")));
+        });
+        return cards;
     }
 
     private static LocalDateTime utc(Instant instant) {

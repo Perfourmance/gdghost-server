@@ -10,13 +10,14 @@ import com.gdghost.question.QuestionCategory;
 /** 점수 공식의 숫자. AI팀이 고치는 곳 (application.yaml의 matching) */
 @ConfigurationProperties("matching")
 public record MatchingConfig(String version, Weights weights, Rule rule, History history, Activity activity,
-        double minScore, int maxCandidates, boolean useQuestionerRulesOnAnonymous,
+        double minScore, int maxCandidates, int maxPerQuestion, int directTimeoutHours,
+        boolean useQuestionerRulesOnAnonymous,
         Map<QuestionCategory, List<String>> categoryExperience) {
 
     public record Weights(double rule, double profile, double history) {
     }
 
-    public record Rule(double experience, double department, double position, double senior) {
+    public record Rule(double experience, double interest, double department, double position, double senior) {
     }
 
     public record History(double adoptedBonus, double reasonMin) {

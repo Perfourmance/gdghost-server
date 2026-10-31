@@ -52,11 +52,13 @@ embedding:                      # Workers AI 계정 ID · 토큰(비밀값). 비
 matching:                       # 후보 계산 설정. AI팀이 조정한다. 값을 바꾸면 version을 올린다 (AI 매칭 설계 5장)
   version: 2026-10-v1
   weights: { rule: 0.4, profile: 0.3, history: 0.3 }
-  rule: { experience: 0.6, department: 0.2, position: 0.1, senior: 0.1 }
+  rule: { experience: 0.6, interest: 0.3, department: 0.2, position: 0.1, senior: 0.1 }
   history: { adopted-bonus: 0.1, reason-min: 0.6 }
   activity: { answer-count-cap: 10, per-answer: 0.01, recent-days: 30, recent-bonus: 0.05, pass-penalty: 0.05 }
   min-score: 0.15               # activity를 뺀 점수와 비교. 실측(2026-10-31): 맞는 짝 유사도 0.53–0.68
-  max-candidates: 3
+  max-candidates: 3             # 처음 보내는 인원
+  max-per-question: 5           # 넘기기 보충 · 지목을 합친 질문당 상한
+  direct-timeout-hours: 24      # 지목받은 선배가 반응이 없으면 일반 라우팅 시작
   use-questioner-rules-on-anonymous: false
   category-experience:
     JOB: [인턴, 정규직 취업, 공모전 수상, 해커톤, 자격증]

@@ -24,14 +24,16 @@ public class RoutingWriter {
         this.json = json;
     }
 
-    void insertMembers(long questionId, List<CandidateScorer.Scored> ranked, String version, Instant now) {
+    /** @param replacement 넘기기 보충이면 rank_no를 비워 처음 보낸 인원과 구분한다 */
+    void insertMembers(long questionId, List<CandidateScorer.Scored> ranked, boolean replacement, String version,
+            Instant now) {
         for (int i = 0; i < ranked.size(); i++) {
             CandidateScorer.Scored scored = ranked.get(i);
             jdbc.update("""
                     INSERT INTO routing (question_id, member_id, stage, rank_no, score, score_detail, state,
                                          sent_at, created_at)
                     VALUES (?, ?, 'MEMBER', ?, ?, ?, 'SENT', ?, ?)
-                    """, questionId, scored.memberId(), i + 1, BigDecimal.valueOf(scored.total()),
+                    """, questionId, scored.memberId(), replacement ? null : i + 1, BigDecimal.valueOf(scored.total()),
                     detail(scored, version), utc(now), utc(now));
         }
     }
@@ -54,6 +56,10 @@ public class RoutingWriter {
 
     void markSent(long routingId, Instant now) {
         jdbc.update("UPDATE routing SET state = 'SENT', sent_at = ? WHERE id = ?", utc(now), routingId);
+    }
+
+    void markPassed(long routingId, Instant now) {
+        jdbc.update("UPDATE routing SET state = 'PASSED', responded_at = ? WHERE id = ?", utc(now), routingId);
     }
 
     void cancel(long routingId, Instant now) {

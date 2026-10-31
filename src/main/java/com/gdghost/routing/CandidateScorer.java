@@ -26,7 +26,14 @@ final class CandidateScorer {
 
     record Candidate(long memberId, String department, Position position, int generation, MemberStatus status,
             List<String> experiences, float[] vector, List<PastAnswer> pastAnswers, int answerCount, int passCount,
-            Instant lastSeenAt) {
+            Instant lastSeenAt, String matchedInterest) {
+
+        Candidate(long memberId, String department, Position position, int generation, MemberStatus status,
+                List<String> experiences, float[] vector, List<PastAnswer> pastAnswers, int answerCount,
+                int passCount, Instant lastSeenAt) {
+            this(memberId, department, position, generation, status, experiences, vector, pastAnswers, answerCount,
+                    passCount, lastSeenAt, null);
+        }
     }
 
     record Scored(long memberId, double rule, double profile, double history, double activity, double relevance,
@@ -75,6 +82,11 @@ final class CandidateScorer {
         if (!matched.isEmpty()) {
             rule += config.rule().experience();
             reasons.add("경험: " + matched.getFirst());
+        }
+        // 선배 찾기에서 고른 분야
+        if (candidate.matchedInterest() != null) {
+            rule += config.rule().interest();
+            reasons.add(candidate.matchedInterest());
         }
         Questioner questioner = question.questioner();
         if (questioner == null) {

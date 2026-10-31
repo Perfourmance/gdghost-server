@@ -1,6 +1,8 @@
 package com.gdghost.routing;
 
 import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -36,15 +38,22 @@ public class OpsDigestJob {
         batch.run(NAME, this::digest);
     }
 
+    /** 어제부터 오늘 사이 3일을 넘긴 것만 적는다 — 같은 질문이 매일 반복되지 않게. 전체는 운영 화면에서 본다 */
     private String digest() {
-        List<RoutingReader.Stale> stale = reader.staleQuestions(clock.instant().minus(RoutingJob.STALE_AFTER));
-        if (!stale.isEmpty()) {
-            String titles = stale.stream().limit(MAX_TITLES)
+        Instant threshold = clock.instant().minus(RoutingJob.STALE_AFTER);
+        List<RoutingReader.Stale> stale = reader.staleQuestions(threshold);
+        Instant dayBefore = threshold.minus(Duration.ofDays(1));
+        List<RoutingReader.Stale> fresh = stale.stream()
+                .filter(question -> question.createdAt().isAfter(dayBefore))
+                .toList();
+        if (!fresh.isEmpty()) {
+            String titles = fresh.stream().limit(MAX_TITLES)
                     .map(question -> "· " + DiscordMessage.escape(question.title()))
                     .collect(Collectors.joining("\n"));
-            discord.send(DiscordChannel.STAFF, new DiscordMessage("3일 넘게 답이 없는 질문 " + stale.size() + "건", null, titles));
+            discord.send(DiscordChannel.STAFF, new DiscordMessage(
+                    "3일 넘게 답이 없는 질문 " + fresh.size() + "건 추가 (전체 " + stale.size() + "건)", null, titles));
         }
-        return "stale=%d".formatted(stale.size());
+        return "stale=%d new=%d".formatted(stale.size(), fresh.size());
     }
 
 }
