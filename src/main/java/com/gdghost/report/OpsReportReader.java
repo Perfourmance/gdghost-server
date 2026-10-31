@@ -63,6 +63,7 @@ public class OpsReportReader {
         Map<Long, Target> shares = shares(ids(rows, ReportTargetType.SHARE));
         Map<Long, Target> shareNotes = shareNotes(ids(rows, ReportTargetType.SHARE_NOTE));
         Map<Long, Target> feeds = feeds(ids(rows, ReportTargetType.FEED));
+        Map<Long, Target> feedComments = feedComments(ids(rows, ReportTargetType.FEED_COMMENT));
         Map<ReportTargetType, Map<Long, Integer>> counts = new HashMap<>();
         for (ReportTargetType type : ReportTargetType.values()) {
             counts.put(type, counts(type, ids(rows, type)));
@@ -75,7 +76,7 @@ public class OpsReportReader {
                 case SHARE -> shares.get(row.targetId());
                 case SHARE_NOTE -> shareNotes.get(row.targetId());
                 case FEED -> feeds.get(row.targetId());
-                default -> null;
+                case FEED_COMMENT -> feedComments.get(row.targetId());
             };
             return new OpsReportResponse(row.id(), row.targetType(), row.targetId(),
                     target == null ? null : target.preview(),
@@ -162,6 +163,20 @@ public class OpsReportReader {
             long id = rs.getLong("id");
             targets.put(id, new Target(preview(rs.getString("body")), "/feed/" + id, rs.getString("deleted_by")));
         });
+        return targets;
+    }
+
+    private Map<Long, Target> feedComments(List<Long> ids) {
+        Map<Long, Target> targets = new HashMap<>();
+        if (ids.isEmpty()) {
+            return targets;
+        }
+        jdbc.query("SELECT id, post_id, body, deleted_by FROM feed_comment WHERE id IN (:ids)", Map.of("ids", ids),
+                rs -> {
+                    long id = rs.getLong("id");
+                    targets.put(id, new Target(preview(rs.getString("body")),
+                            "/feed/" + rs.getLong("post_id") + "#comment-" + id, rs.getString("deleted_by")));
+                });
         return targets;
     }
 

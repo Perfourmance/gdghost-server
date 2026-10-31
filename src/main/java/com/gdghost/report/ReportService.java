@@ -1,8 +1,6 @@
 package com.gdghost.report;
 
 import java.time.Clock;
-import java.util.List;
-
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -10,7 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.gdghost.common.error.BusinessException;
 import com.gdghost.common.error.ErrorCode;
-import com.gdghost.common.error.ErrorField;
+import com.gdghost.feed.FeedCommentModeration;
 import com.gdghost.feed.FeedModeration;
 import com.gdghost.notice.NoticeCommentModeration;
 import com.gdghost.question.AnswerRepository;
@@ -29,12 +27,14 @@ public class ReportService {
     private final ShareModeration shares;
     private final ShareNoteModeration shareNotes;
     private final FeedModeration feeds;
+    private final FeedCommentModeration feedComments;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public ReportService(ReportRepository reports, QuestionRepository questions, AnswerRepository answers,
             NoticeCommentModeration noticeComments, ShareModeration shares, ShareNoteModeration shareNotes,
-            FeedModeration feeds, ApplicationEventPublisher events, Clock clock) {
+            FeedModeration feeds, FeedCommentModeration feedComments, ApplicationEventPublisher events, Clock clock) {
+        this.feedComments = feedComments;
         this.feeds = feeds;
         this.shareNotes = shareNotes;
         this.reports = reports;
@@ -49,10 +49,6 @@ public class ReportService {
     @Transactional
     public ReportCreatedResponse create(long reporterId, ReportCreateRequest request) {
         ReportTargetType type = request.targetType();
-        if (!type.isSupported()) {
-            throw new BusinessException(ErrorCode.VALIDATION_FAILED, null,
-                    List.of(new ErrorField("targetType", "아직 신고할 수 없는 대상입니다.")));
-        }
         if (!isLive(type, request.targetId())) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "신고할 글을 찾을 수 없습니다.");
         }
@@ -82,7 +78,7 @@ public class ReportService {
             case SHARE -> shares.isLive(targetId);
             case SHARE_NOTE -> shareNotes.isLive(targetId);
             case FEED -> feeds.isLive(targetId);
-            default -> false;
+            case FEED_COMMENT -> feedComments.isLive(targetId);
         };
     }
 
