@@ -26,19 +26,20 @@ public class AnswerService {
     private final QuestionAnonAliasWriter aliasWriter;
     private final QuestionDetailReader detailReader;
     private final QuestionNotifier notifier;
+    private final RoutingPort routing;
     private final Clock clock;
 
     public AnswerService(QuestionRepository questions, AnswerRepository answers, QuestionAnonAliasWriter aliasWriter,
-            QuestionDetailReader detailReader, QuestionNotifier notifier, Clock clock) {
+            QuestionDetailReader detailReader, QuestionNotifier notifier, RoutingPort routing, Clock clock) {
         this.questions = questions;
         this.answers = answers;
         this.aliasWriter = aliasWriter;
         this.detailReader = detailReader;
         this.notifier = notifier;
+        this.routing = routing;
         this.clock = clock;
     }
 
-    // TODO 지목된 routing ANSWERED(7)
     @Transactional
     public AnswerNode create(long memberId, long questionId, AnswerCreateRequest request) {
         Instant now = clock.instant();
@@ -70,6 +71,7 @@ public class AnswerService {
                 request.isAnonymous(), now));
         if (parent == null) {
             question.markAnswered();
+            routing.answered(questionId, memberId);
         }
         questions.flush();
         QuestionDetailReader.AnswerRow row = detailReader.answer(answer.getId());

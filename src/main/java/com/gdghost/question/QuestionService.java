@@ -107,7 +107,7 @@ public class QuestionService {
         return detail(question, viewerId);
     }
 
-    /** 답변(지우지 않은 답변 · 답글)이 있을 때 고치면 수정됨 표시. TODO 라우팅 후보 재계산(7) */
+    /** 답변(지우지 않은 답변 · 답글)이 있을 때 고치면 수정됨 표시 */
     @Transactional
     public QuestionDetail update(long memberId, long questionId, QuestionUpdateRequest request) {
         Question question = mine(memberId, questionId);
@@ -121,7 +121,7 @@ public class QuestionService {
         return detail(find(questionId), memberId);
     }
 
-    /** 답변은 남기지만 질문과 함께 안 보인다. TODO 보내지 않은 라우팅 취소(7) */
+    /** 답변은 남기지만 질문과 함께 안 보인다. 보내지 않은 지목은 라우팅 배치가 보낼 때 취소한다 */
     @Transactional
     public void delete(long memberId, long questionId) {
         mine(memberId, questionId).deleteByAuthor(clock.instant());

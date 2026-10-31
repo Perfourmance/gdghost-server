@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -36,6 +37,20 @@ public class RoutingReader {
     record Delivery(long memberId, String stage, String state, String nickname, String scoreDetail, Instant sentAt) {
     }
 
+    record Scheduled(long id, long questionId, long memberId) {
+    }
+
+    record Stale(long id, String title) {
+    }
+
+    private static final String WAITING = """
+            SELECT q.id FROM question q
+            WHERE q.state = 'WAITING' AND q.deleted_at IS NULL
+              AND q.created_at <= :before AND q.created_at > :after
+              AND NOT EXISTS (SELECT 1 FROM routing r WHERE r.question_id = q.id
+                              AND r.stage <> 'STAFF' AND r.state IN ('CANDIDATE', 'SENT', 'ANSWERED'))
+            """;
+
     private final NamedParameterJdbcTemplate jdbc;
     private final EmbeddingStore embeddings;
 
@@ -56,12 +71,11 @@ public class RoutingReader {
                 instant(rs, "last_seen_at")));
     }
 
-    /** 이 질문에서 이미 보냈거나 넘긴 사람, 지목한 사람 — 다시 후보로 만들지 않는다 */
+    /** 이 질문에서 이미 받았거나 넘긴 사람, 지목한 사람 — 같은 사람에게 두 번 가지 않게 */
     Set<Long> alreadyRouted(long questionId) {
         return new HashSet<>(jdbc.queryForList("""
                 SELECT member_id FROM routing
-                WHERE question_id = :question AND state <> 'CANCELED'
-                  AND NOT (stage = 'MEMBER' AND state = 'CANDIDATE')
+                WHERE question_id = :question AND state <> 'CANCELED' AND stage <> 'STAFF'
                 """, Map.of("question", questionId), Long.class));
     }
 
@@ -75,7 +89,7 @@ public class RoutingReader {
                 """, Map.of("question", questionId), Long.class));
     }
 
-    /** 오늘(KST) 받은 건수 */
+    /** 오늘(KST) 받은 건수. 운영진 단계는 채널 알림이라 세지 않는다 */
     Map<Long, Integer> receivedToday(List<Long> memberIds, Instant now) {
         Map<Long, Integer> counts = new HashMap<>();
         if (memberIds.isEmpty()) {
@@ -85,7 +99,7 @@ public class RoutingReader {
                 .atOffset(ZoneOffset.UTC).toLocalDateTime();
         jdbc.query("""
                 SELECT member_id, COUNT(*) AS received FROM routing
-                WHERE member_id IN (:ids) AND sent_at >= :start
+                WHERE member_id IN (:ids) AND sent_at >= :start AND stage <> 'STAFF'
                 GROUP BY member_id
                 """, new MapSqlParameterSource("ids", memberIds).addValue("start", start),
                 rs -> {
@@ -162,6 +176,52 @@ public class RoutingReader {
             counts.put(rs.getLong("member_id"), rs.getInt("passes"));
         });
         return counts;
+    }
+
+    /** 답을 기다리는 질문 중 부원 · 지목 전달이 진행 중이 아닌 것. 3일이 지나면 운영진 목록으로 넘어간다 */
+    List<Long> waitingForMembers(Instant createdBefore, Instant createdAfter) {
+        return jdbc.queryForList(WAITING + " ORDER BY q.id", window(createdBefore, createdAfter), Long.class);
+    }
+
+    /** 위 조건 + 운영진에게 아직 알리지 않은 것 */
+    List<Long> waitingForStaff(Instant createdBefore, Instant createdAfter) {
+        return jdbc.queryForList(WAITING + """
+                 AND NOT EXISTS (SELECT 1 FROM routing r WHERE r.question_id = q.id AND r.stage = 'STAFF')
+                ORDER BY q.id
+                """, window(createdBefore, createdAfter), Long.class);
+    }
+
+    /** 22–08시에 지목돼 보내지 않은 것 */
+    List<Scheduled> scheduledDirects() {
+        return jdbc.query("""
+                SELECT id, question_id, member_id FROM routing
+                WHERE stage = 'DIRECT' AND state = 'CANDIDATE' ORDER BY id
+                """, (rs, i) -> new Scheduled(rs.getLong("id"), rs.getLong("question_id"), rs.getLong("member_id")));
+    }
+
+    /** 대표 한 명. 운영진 단계는 채널 알림이라 행을 질문당 하나만 남긴다 */
+    Optional<Long> anyActiveStaff() {
+        return jdbc.queryForList("""
+                SELECT id FROM member
+                WHERE role = 'STAFF' AND withdrawn_at IS NULL AND suspended_at IS NULL
+                ORDER BY id LIMIT 1
+                """, Map.of(), Long.class).stream().findFirst();
+    }
+
+    List<Stale> staleQuestions(Instant createdBefore) {
+        return jdbc.query("""
+                SELECT id, title FROM question
+                WHERE state = 'WAITING' AND deleted_at IS NULL AND created_at <= :before
+                ORDER BY id
+                """, Map.of("before", utc(createdBefore)), (rs, i) -> new Stale(rs.getLong("id"), rs.getString("title")));
+    }
+
+    private static MapSqlParameterSource window(Instant createdBefore, Instant createdAfter) {
+        return new MapSqlParameterSource("before", utc(createdBefore)).addValue("after", utc(createdAfter));
+    }
+
+    private static LocalDateTime utc(Instant instant) {
+        return instant.atOffset(ZoneOffset.UTC).toLocalDateTime();
     }
 
     /** 취소된 것은 뺀다. 보낸 것 먼저, 그 안에서 순위 · 만든 순 */

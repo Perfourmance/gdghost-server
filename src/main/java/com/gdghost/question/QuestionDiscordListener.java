@@ -28,19 +28,9 @@ public class QuestionDiscordListener {
         questions.findById(event.questionId())
                 .filter(question -> !question.isDeleted())
                 .ifPresent(question -> discord.send(DiscordChannel.MEMBER, new DiscordMessage(
-                        "새 질문 · " + label(question.getCategory()),
+                        "새 질문 · " + question.getCategory().label(),
                         webUrl + "/questions/" + question.getId(),
                         DiscordMessage.escape(question.getTitle()))));
-    }
-
-    private static String label(QuestionCategory category) {
-        return switch (category) {
-            case JOB -> "취업·채용";
-            case CAREER -> "커리어·이직";
-            case PATH -> "진로 고민";
-            case CAMPUS -> "학교생활";
-            case STUDY -> "기술·공부";
-        };
     }
 
 }
