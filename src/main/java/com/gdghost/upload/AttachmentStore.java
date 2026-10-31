@@ -37,6 +37,11 @@ class AttachmentStore {
         }
     }
 
+    void delete(UploadPurpose ownerType, long ownerId) {
+        jdbc.update("DELETE FROM attachment WHERE owner_type = :type AND owner_id = :owner",
+                new MapSqlParameterSource().addValue("type", ownerType.name()).addValue("owner", ownerId));
+    }
+
     List<Row> find(UploadPurpose ownerType, Collection<Long> ownerIds) {
         return jdbc.query("""
                 SELECT owner_id, object_key, sort_order

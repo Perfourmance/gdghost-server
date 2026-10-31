@@ -44,6 +44,12 @@ public class MemberWithdrawalWriter {
                 UPDATE routing SET state = 'CANCELED', responded_at = ?
                 WHERE member_id = ? AND state = 'CANDIDATE'
                 """, now, memberId);
+        // 연결이 끊긴 사진은 정리 배치가 R2에서 지운다. 글과 인증 횟수는 남는다
+        jdbc.update("""
+                DELETE a FROM attachment a
+                JOIN certification c ON a.owner_type = 'CERT' AND a.owner_id = c.id
+                WHERE c.member_id = ?
+                """, memberId);
         leaveRecruits(memberId, LocalDateTime.ofInstant(now, ZoneOffset.UTC));
     }
 

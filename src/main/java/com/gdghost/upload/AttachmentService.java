@@ -53,6 +53,12 @@ public class AttachmentService {
         store.insert(purpose, ownerId, objectKeys);
     }
 
+    /** 사진을 통째로 교체한다. 빠진 사진은 연결이 끊겨 정리 배치가 R2에서 지운다 */
+    public void replace(UploadPurpose purpose, long ownerId, long memberId, List<String> objectKeys) {
+        store.delete(purpose, ownerId);
+        attach(purpose, ownerId, memberId, objectKeys);
+    }
+
     /** 글 id별 사진. 권한 확인은 부르는 쪽이 한다 — 여기서 나간 주소는 만료까지 누구나 열 수 있다 */
     public Map<Long, List<Attachment>> photos(UploadPurpose purpose, Collection<Long> ownerIds) {
         if (ownerIds.isEmpty()) {

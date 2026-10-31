@@ -96,14 +96,23 @@ public class EventService {
         List<EventReader.CertificationRow> page = rows.subList(0, Math.min(size, rows.size()));
         Map<Long, List<Attachment>> photos = attachments.photos(UploadPurpose.CERT,
                 page.stream().map(EventReader.CertificationRow::id).toList());
-        List<CertificationItem> items = new ArrayList<>(rows.size());
-        for (EventReader.CertificationRow row : rows) {
-            boolean mine = row.author().id() == viewer.id();
-            items.add(new CertificationItem(row.id(), AuthorRef.of(row.author(), false, null, viewer.id()), row.body(),
-                    photos.getOrDefault(row.id(), List.of()), row.state(),
-                    mine || staff ? row.rejectReason() : null, mine, row.createdAt()));
-        }
+        List<CertificationItem> items = rows.stream().map(row -> item(row, viewer, photos)).toList();
         return CursorPage.of(items, size, item -> Long.toString(item.id()));
+    }
+
+    /** 방금 올린 내 글 하나 */
+    CertificationItem certificationItem(AuthMember viewer, long certificationId) {
+        return item(reader.certification(certificationId), viewer,
+                attachments.photos(UploadPurpose.CERT, List.of(certificationId)));
+    }
+
+    private static CertificationItem item(EventReader.CertificationRow row, AuthMember viewer,
+            Map<Long, List<Attachment>> photos) {
+        boolean mine = row.author().id() == viewer.id();
+        boolean staff = viewer.role() == Role.STAFF;
+        return new CertificationItem(row.id(), AuthorRef.of(row.author(), false, null, viewer.id()), row.body(),
+                photos.getOrDefault(row.id(), List.of()), row.state(), mine || staff ? row.rejectReason() : null, mine,
+                row.createdAt());
     }
 
     private List<EventDetail.Rank> ranking(long eventId) {
