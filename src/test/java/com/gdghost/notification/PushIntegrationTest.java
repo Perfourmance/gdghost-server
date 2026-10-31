@@ -226,6 +226,24 @@ class PushIntegrationTest {
     }
 
     @Test
+    void 채택은_답변자에게_푸시로_간다() throws Exception {
+        TestMember author = fixtures.member();
+        TestMember answerer = fixtures.member();
+        String phone = endpoint();
+        subscribe(answerer, phone);
+        long question = fixtures.question(author.id(), false);
+        long answer = fixtures.answer(question, answerer.id(), false, null);
+
+        mvc.perform(put("/api/v1/questions/{q}/adoption", question).with(csrfToken())
+                .cookie(fixtures.loginCookie(author)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"answerId\":" + answer + "}"))
+                .andExpect(status().isOk());
+
+        assertThat(push.await(s -> s.payload().contains("ANSWER_ADOPTED"), 1))
+                .extracting(s -> s.target().endpoint()).containsExactly(phone);
+    }
+
+    @Test
     void 운영진_지정은_대상자에게_푸시로_간다() throws Exception {
         TestMember dev = fixtures.dev();
         TestMember member = fixtures.member();

@@ -45,6 +45,21 @@ class SessionIntegrationTest {
     }
 
     @Test
+    void 내_세션_확인에_확인하지_않은_필독_공지_수가_담긴다() throws Exception {
+        TestMember staff = fixtures.staff();
+        TestMember member = fixtures.member();
+        fixtures.notice(staff.id());
+        long unconfirmed = fixtures.notice(staff.id());
+        long confirmed = fixtures.notice(staff.id());
+        jdbc.update("UPDATE notice SET is_must_read = TRUE WHERE id IN (?, ?)", unconfirmed, confirmed);
+        jdbc.update("INSERT INTO notice_read (notice_id, member_id, read_at, confirmed_at) VALUES (?, ?, NOW(6), NOW(6))",
+                confirmed, member.id());
+
+        mvc.perform(get("/api/v1/auth/me").cookie(fixtures.loginCookie(member)))
+                .andExpect(jsonPath("$.unconfirmedMustReadCount").value(1));
+    }
+
+    @Test
     void 내_세션을_확인하면_Me를_주고_마지막_접속을_남긴다() throws Exception {
         jdbc.update("UPDATE member SET bio = '자기소개' WHERE id = ?", member.id());
         jdbc.update("""
