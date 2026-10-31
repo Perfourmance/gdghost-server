@@ -26,10 +26,19 @@ public class RateLimitAspect {
 
     @Before("@annotation(rateLimit)")
     void check(JoinPoint joinPoint, RateLimit rateLimit) {
-        String key = joinPoint.getSignature().toLongString() + "|" + subject(rateLimit.per());
-        long retryAfter = limiter.tryAcquire(key, rateLimit.limit(), Duration.of(rateLimit.window(), rateLimit.unit()));
+        Duration window = Duration.of(rateLimit.window(), rateLimit.unit());
+        String key = joinPoint.getSignature().toLongString() + "|" + window + "|" + subject(rateLimit.per());
+        long retryAfter = limiter.tryAcquire(key, rateLimit.limit(), window);
         if (retryAfter > 0) {
             throw new RateLimitedException(retryAfter);
+        }
+    }
+
+    /** 같은 메서드에 @RateLimit이 여러 개면 컨테이너로 묶여 들어온다 */
+    @Before("@annotation(limits)")
+    void checkAll(JoinPoint joinPoint, RateLimit.List limits) {
+        for (RateLimit rateLimit : limits.value()) {
+            check(joinPoint, rateLimit);
         }
     }
 

@@ -60,12 +60,13 @@ public class Question {
     }
 
     /** null은 그대로, 빈 본문은 지운다. 실제로 바뀐 게 있을 때만 수정 시각을 찍는다 */
-    public void edit(QuestionCategory category, String title, String body, boolean answered, Instant now) {
+    /** @return 분류 · 제목 · 본문이 실제로 바뀌었으면 true */
+    public boolean edit(QuestionCategory category, String title, String body, boolean answered, Instant now) {
         QuestionCategory newCategory = category != null ? category : this.category;
         String newTitle = title != null ? title : this.title;
         String newBody = body == null ? this.body : body.isEmpty() ? null : body;
         if (newCategory == this.category && newTitle.equals(this.title) && Objects.equals(newBody, this.body)) {
-            return;
+            return false;
         }
         this.category = newCategory;
         this.title = newTitle;
@@ -74,6 +75,7 @@ public class Question {
         if (answered) {
             this.editedAfterAnswer = true;
         }
+        return true;
     }
 
     /** 첫 답변이면 WAITING → ANSWERED */

@@ -5,6 +5,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.temporal.ChronoUnit;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
@@ -62,6 +64,19 @@ class RateLimitIntegrationTest {
                 .andExpect(status().isOk());
     }
 
+    @Test
+    void 제한이_여러_개면_각각_센다() throws Exception {
+        Cookie login = fixtures.loginCookie(fixtures.member());
+        mvc.perform(get("/api/v1/probe/two-limits").cookie(login)).andExpect(status().isOk());
+        mvc.perform(get("/api/v1/probe/two-limits").cookie(login)).andExpect(status().isOk());
+
+        // 분당 5회에는 여유가 있고 하루 2회에 걸린다
+        mvc.perform(get("/api/v1/probe/two-limits").cookie(login))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(result -> assertThat(Long.parseLong(result.getResponse().getHeader(HttpHeaders.RETRY_AFTER)))
+                        .isGreaterThan(3600L));
+    }
+
     private static MockHttpServletRequestBuilder fromIp(String ip) {
         return get("/api/v1/probe/per-ip").with(request -> {
             request.setRemoteAddr(ip);
@@ -75,6 +90,12 @@ class RateLimitIntegrationTest {
         @RateLimit(limit = 2)
         @GetMapping("/api/v1/probe/per-member")
         void perMember() {
+        }
+
+        @RateLimit(limit = 5)
+        @RateLimit(limit = 2, unit = ChronoUnit.DAYS)
+        @GetMapping("/api/v1/probe/two-limits")
+        void twoLimits() {
         }
 
         @RateLimit(limit = 1, per = RateLimit.Per.IP)

@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,17 +32,19 @@ public class MyProfileService {
     private final MemberTagWriter tagWriter;
     private final MemberContactWriter contactWriter;
     private final TagService tagService;
+    private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public MyProfileService(MemberRepository members, MemberProfileReader profileReader,
             ProfileCompletenessReader completenessReader, MemberTagWriter tagWriter,
-            MemberContactWriter contactWriter, TagService tagService, Clock clock) {
+            MemberContactWriter contactWriter, TagService tagService, ApplicationEventPublisher events, Clock clock) {
         this.members = members;
         this.profileReader = profileReader;
         this.completenessReader = completenessReader;
         this.tagWriter = tagWriter;
         this.contactWriter = contactWriter;
         this.tagService = tagService;
+        this.events = events;
         this.clock = clock;
     }
 
@@ -59,7 +62,6 @@ public class MyProfileService {
                 completenessReader.read(member));
     }
 
-    // TODO 매칭 재료가 바뀌면 커밋 후 부원 임베딩 재계산 요청(7단계)
     @Transactional
     public MyProfileResponse updateProfile(long memberId, ProfileUpdateRequest request) {
         Member member = members.findByIdForUpdate(memberId)
@@ -84,6 +86,7 @@ public class MyProfileService {
             // 중복 확인과 저장 사이에 다른 사람이 같은 닉네임을 가져간 경우
             throw nicknameTaken();
         }
+        events.publishEvent(new MemberProfileChangedEvent(memberId));
         return read(memberId);
     }
 

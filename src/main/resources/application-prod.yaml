@@ -24,6 +24,11 @@ push:                           # 운영은 필수 — 없으면 기동 실패
     public-key: ${VAPID_PUBLIC_KEY}
     private-key: ${VAPID_PRIVATE_KEY}
 
+embedding:                      # 운영은 필수 — 없으면 기동 실패
+  required: true
+  account-id: ${CLOUDFLARE_ACCOUNT_ID}
+  api-token: ${WORKERS_AI_API_TOKEN}
+
 springdoc:                      # 운영에서는 API 문서를 열지 않는다
   api-docs:
     enabled: false

@@ -1,6 +1,7 @@
 package com.gdghost.question;
 
 import java.net.URI;
+import java.time.temporal.ChronoUnit;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -39,10 +40,11 @@ public class QuestionController {
         this.adoptionService = adoptionService;
     }
 
-    @Operation(summary = "질문 작성", description = "Idempotency-Key 필수. 익명 여부는 나중에 바꿀 수 없다. 부원당 분당 3회. "
+    @Operation(summary = "질문 작성", description = "Idempotency-Key 필수. 익명 여부는 나중에 바꿀 수 없다. 부원당 분당 3회 · 하루 30회(첫 작성부터 24시간). "
             + "선배 지목(targetMemberId)은 7단계부터라 directDelivery는 지금 항상 null.")
     @Idempotent
     @RateLimit(limit = 3)
+    @RateLimit(limit = 30, unit = ChronoUnit.DAYS)
     @PostMapping
     public ResponseEntity<QuestionCreatedResponse> create(@AuthenticationPrincipal AuthMember me,
             @RequestBody @Valid QuestionCreateRequest request) {
@@ -71,7 +73,9 @@ public class QuestionController {
     }
 
     @Operation(summary = "질문 수정", description = "본인 질문만. 보낸 필드만 바꾸고(null은 그대로), 빈 본문(\"\")은 지운다. "
-            + "익명 여부는 바꿀 수 없어 보내면 400. 지우지 않은 답변 · 답글이 있을 때 내용이 바뀌면 editedAfterAnswer = true.")
+            + "익명 여부는 바꿀 수 없어 보내면 400. 지우지 않은 답변 · 답글이 있을 때 내용이 바뀌면 editedAfterAnswer = true. "
+            + "부원당 하루 20회(첫 수정부터 24시간).")
+    @RateLimit(limit = 20, unit = ChronoUnit.DAYS)
     @PatchMapping("/{questionId}")
     public QuestionDetail update(@AuthenticationPrincipal AuthMember me, @PathVariable long questionId,
             @RequestBody @Valid QuestionUpdateRequest request) {
