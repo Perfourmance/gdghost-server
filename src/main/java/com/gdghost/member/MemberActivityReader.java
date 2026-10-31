@@ -83,6 +83,20 @@ public class MemberActivityReader {
                         rs.getObject("created_at", LocalDateTime.class).toInstant(ZoneOffset.UTC))));
     }
 
+    /** 피드는 제목이 없어 title null. 익명이 없고 anonymous는 공유 탭과 같다 */
+    public List<ActivityItem.Row> feeds(long memberId, boolean self, Long afterId, int limit) {
+        return jdbc.query("""
+                SELECT id, LEFT(body, :snippet) AS snippet, created_at
+                FROM feed_post
+                WHERE author_id = :id AND deleted_at IS NULL AND (:afterId IS NULL OR id < :afterId)
+                ORDER BY id DESC
+                LIMIT :limit
+                """, params(memberId, self, afterId, limit), (rs, i) -> new ActivityItem.Row(
+                rs.getLong("id"), new ActivityItem(ActivityType.FEED, rs.getLong("id"), null,
+                        rs.getString("snippet"), false, self ? Boolean.FALSE : null,
+                        rs.getObject("created_at", LocalDateTime.class).toInstant(ZoneOffset.UTC))));
+    }
+
     private static MapSqlParameterSource params(long memberId, boolean includeAnonymous, Long afterId, int limit) {
         return new MapSqlParameterSource()
                 .addValue("id", memberId)

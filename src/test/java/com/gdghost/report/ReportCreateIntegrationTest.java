@@ -138,7 +138,7 @@ class ReportCreateIntegrationTest {
         report(login, "{\"targetId\":" + question + ",\"reason\":\"사유\"}")
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors[0].field").value("targetType"));
-        report(login, body("FEED", question, "사유"))
+        report(login, body("FEED_COMMENT", question, "사유"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
                 .andExpect(jsonPath("$.errors[0].field").value("targetType"));

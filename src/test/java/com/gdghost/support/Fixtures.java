@@ -165,6 +165,20 @@ public class Fixtures {
                 .longValue();
     }
 
+    /** 피드 글 (분류 DAILY, 본문 '피드 본문 N') */
+    public long feedPost(long authorId) {
+        int n = SEQUENCE.incrementAndGet();
+        return new SimpleJdbcInsert(jdbc)
+                .withTableName("feed_post")
+                .usingColumns("author_id", "category", "body")
+                .usingGeneratedKeyColumns("id")
+                .executeAndReturnKey(Map.of(
+                        "author_id", authorId,
+                        "category", "DAILY",
+                        "body", "피드 본문 " + n))
+                .longValue();
+    }
+
     /** OPEN 신고 (사유 '신고 사유') */
     public long report(long reporterId, String targetType, long targetId) {
         return new SimpleJdbcInsert(jdbc)

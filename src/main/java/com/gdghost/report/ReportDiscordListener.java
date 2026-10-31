@@ -54,6 +54,7 @@ public class ReportDiscordListener {
             case SHARE_NOTE -> shareNotes.shareId(id)
                     .map(shareId -> webUrl + "/shares/" + shareId + "#note-" + id)
                     .orElse(null);
+            case FEED -> webUrl + "/feed/" + id;
             default -> null;
         };
     }

@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.gdghost.common.error.BusinessException;
 import com.gdghost.common.error.ErrorCode;
 import com.gdghost.common.error.ErrorField;
+import com.gdghost.feed.FeedModeration;
 import com.gdghost.notice.NoticeCommentModeration;
 import com.gdghost.question.AnswerRepository;
 import com.gdghost.question.QuestionRepository;
@@ -27,12 +28,14 @@ public class ReportService {
     private final NoticeCommentModeration noticeComments;
     private final ShareModeration shares;
     private final ShareNoteModeration shareNotes;
+    private final FeedModeration feeds;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public ReportService(ReportRepository reports, QuestionRepository questions, AnswerRepository answers,
             NoticeCommentModeration noticeComments, ShareModeration shares, ShareNoteModeration shareNotes,
-            ApplicationEventPublisher events, Clock clock) {
+            FeedModeration feeds, ApplicationEventPublisher events, Clock clock) {
+        this.feeds = feeds;
         this.shareNotes = shareNotes;
         this.reports = reports;
         this.questions = questions;
@@ -78,6 +81,7 @@ public class ReportService {
             case NOTICE_COMMENT -> noticeComments.isLive(targetId);
             case SHARE -> shares.isLive(targetId);
             case SHARE_NOTE -> shareNotes.isLive(targetId);
+            case FEED -> feeds.isLive(targetId);
             default -> false;
         };
     }
