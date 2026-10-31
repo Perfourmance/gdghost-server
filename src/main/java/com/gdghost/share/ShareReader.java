@@ -45,6 +45,12 @@ class ShareReader {
     record NoteRow(long id, long authorId, String nickname, boolean withdrawn, String body, Instant createdAt) {
     }
 
+    record SavedRow(Row share, Instant savedAt) {
+    }
+
+    record SavedAfter(Instant savedAt, long id) {
+    }
+
     /** 커서는 정렬과 같은 값. LATEST면 saveCount는 null */
     record After(Long saveCount, long id) {
     }
@@ -69,8 +75,49 @@ class ShareReader {
                         .addValue("afterSave", after == null ? null : after.saveCount())
                         .addValue("afterId", after == null ? null : after.id())
                         .addValue("limit", limit),
-                (rs, i) -> new Row(rs.getLong("id"), ShareCategory.valueOf(rs.getString("category")),
-                        rs.getString("title"), author(rs), rs.getLong("save_count"), instant(rs, "created_at")));
+                (rs, i) -> row(rs));
+    }
+
+    /** 최근 저장한 순. 지운 글은 빠진다 */
+    List<SavedRow> saved(long memberId, SavedAfter after, int limit) {
+        String position = after == null ? "" : """
+                AND (v.created_at < :afterAt OR (v.created_at = :afterAt AND v.share_id < :afterId))
+                """;
+        return jdbc.query("""
+                SELECT s.id, s.category, s.title, s.save_count, s.created_at, v.created_at AS saved_at,
+                """ + AUTHOR_COLUMNS + """
+                FROM share_save v
+                JOIN share s ON s.id = v.share_id
+                JOIN member m ON m.id = s.author_id
+                WHERE v.member_id = :member AND s.deleted_at IS NULL
+                """ + position + "ORDER BY v.created_at DESC, v.share_id DESC LIMIT :limit",
+                new MapSqlParameterSource()
+                        .addValue("member", memberId)
+                        .addValue("afterAt", after == null ? null : LocalDateTime.ofInstant(after.savedAt(), ZoneOffset.UTC))
+                        .addValue("afterId", after == null ? null : after.id())
+                        .addValue("limit", limit),
+                (rs, i) -> new SavedRow(row(rs), instant(rs, "saved_at")));
+    }
+
+    /** since 이후 저장이 많은 순. 저장이 없는 글은 빠진다 */
+    List<Row> popular(Instant since, int limit) {
+        return jdbc.query("""
+                SELECT s.id, s.category, s.title, s.save_count, s.created_at,
+                """ + AUTHOR_COLUMNS + """
+                FROM (SELECT share_id, COUNT(*) AS n FROM share_save WHERE created_at >= :since GROUP BY share_id) r
+                JOIN share s ON s.id = r.share_id
+                JOIN member m ON m.id = s.author_id
+                WHERE s.deleted_at IS NULL
+                ORDER BY r.n DESC, s.id DESC
+                LIMIT :limit
+                """, new MapSqlParameterSource()
+                .addValue("since", LocalDateTime.ofInstant(since, ZoneOffset.UTC))
+                .addValue("limit", limit), (rs, i) -> row(rs));
+    }
+
+    long saveCount(long shareId) {
+        return jdbc.queryForList("SELECT save_count FROM share WHERE id = :id", Map.of("id", shareId), Long.class)
+                .stream().findFirst().orElse(0L);
     }
 
     Optional<DetailRow> find(long shareId, long viewerId) {
@@ -134,6 +181,11 @@ class ShareReader {
 
     private static String escapeLike(String text) {
         return text.replace("!", "!!").replace("%", "!%").replace("_", "!_");
+    }
+
+    private static Row row(ResultSet rs) throws SQLException {
+        return new Row(rs.getLong("id"), ShareCategory.valueOf(rs.getString("category")), rs.getString("title"),
+                author(rs), rs.getLong("save_count"), instant(rs, "created_at"));
     }
 
     private static AuthorRef.Row author(ResultSet rs) throws SQLException {

@@ -72,4 +72,45 @@ class HomeIntegrationTest {
                 .andExpect(jsonPath("$.pinnedNotices").isEmpty());
     }
 
+    @Test
+    void 인기_공유는_최근_7일_저장_순으로_3개() throws Exception {
+        long top = fixtures.share(author.id());
+        long second = fixtures.share(author.id());
+        long third = fixtures.share(author.id());
+        long fourth = fixtures.share(author.id());
+        long old = fixtures.share(author.id());
+        long deleted = fixtures.share(author.id());
+        long a = fixtures.member().id();
+        long b = fixtures.member().id();
+        long c = fixtures.member().id();
+        for (long member : new long[] { a, b, c }) {
+            saveShare(top, member, 0);
+            saveShare(old, member, 8);
+            saveShare(deleted, member, 0);
+        }
+        saveShare(second, a, 0);
+        saveShare(second, b, 0);
+        saveShare(third, a, 0);
+        saveShare(fourth, b, 0);
+        jdbc.update("UPDATE share SET save_count = 100 WHERE id = ?", old);
+        jdbc.update("UPDATE share SET deleted_at = UTC_TIMESTAMP(6), deleted_by = 'AUTHOR' WHERE id = ?", deleted);
+
+        mvc.perform(get("/api/v1/home").cookie(fixtures.loginCookie(fixtures.member())))
+                .andExpect(jsonPath("$.popularShares[*].id", contains((int) top, (int) second, (int) fourth)))
+                .andExpect(jsonPath("$.popularShares[0].author.id").value(author.id()));
+        mvc.perform(get("/api/v1/home"))
+                .andExpect(jsonPath("$.popularShares[*].id", contains((int) top, (int) second, (int) fourth)))
+                .andExpect(jsonPath("$.popularShares[0].title").exists())
+                .andExpect(jsonPath("$.popularShares[0].category").value("TIP"))
+                .andExpect(jsonPath("$.popularShares[0].author").doesNotExist())
+                .andExpect(jsonPath("$.popularShares[0].saved").doesNotExist());
+    }
+
+    private void saveShare(long share, long member, int daysAgo) {
+        jdbc.update("""
+                INSERT INTO share_save (share_id, member_id, created_at)
+                VALUES (?, ?, UTC_TIMESTAMP(6) - INTERVAL ? DAY)
+                """, share, member, daysAgo);
+    }
+
 }

@@ -1,7 +1,7 @@
 package com.gdghost.share;
 
 import java.time.Clock;
-import java.time.Instant;
+import java.time.Duration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +23,7 @@ import com.gdghost.upload.UploadPurpose;
 @Service
 public class ShareService {
 
+    private static final Duration POPULAR_WINDOW = Duration.ofDays(7);
     private static final int QUERY_MIN = 2;
     private static final int QUERY_MAX = 30;
 
@@ -59,17 +60,35 @@ public class ShareService {
                             GuestAuthor.of(row.author(), false), row.createdAt()))
                     .toList(), page.nextCursor(), page.hasMore());
         }
-        List<Long> ids = page.items().stream().map(ShareReader.Row::id).toList();
+        return new CursorPage<>(summaries(page.items(), me.id()), page.nextCursor(), page.hasMore());
+    }
+
+    /** 최근 7일 저장이 많은 글. 비회원은 id · 분류 · 제목만 */
+    @Transactional(readOnly = true)
+    public List<?> popular(AuthMember me, int size) {
+        List<ShareReader.Row> rows = reader.popular(clock.instant().minus(POPULAR_WINDOW), size);
+        if (me == null) {
+            return rows.stream().map(row -> new GuestPopularShare(row.id(), row.category(), row.title())).toList();
+        }
+        return summaries(rows, me.id());
+    }
+
+    /** 페이지 글 id로 태그 · 덧붙이기 수 · 저장 여부 · 사진 유무를 한 번씩 읽는다 */
+    List<ShareSummary> summaries(List<ShareReader.Row> rows, long viewerId) {
+        if (rows.isEmpty()) {
+            return List.of();
+        }
+        List<Long> ids = rows.stream().map(ShareReader.Row::id).toList();
         Map<Long, List<String>> tags = reader.tags(ids);
         Map<Long, Long> noteCounts = reader.noteCounts(ids);
-        Set<Long> saved = reader.savedAmong(ids, me.id());
+        Set<Long> saved = reader.savedAmong(ids, viewerId);
         Set<Long> withPhoto = reader.withPhotoAmong(ids);
-        return new CursorPage<>(page.items().stream()
+        return rows.stream()
                 .map(row -> new ShareSummary(row.id(), row.category(), row.title(),
-                        tags.getOrDefault(row.id(), List.of()), AuthorRef.of(row.author(), false, null, me.id()),
+                        tags.getOrDefault(row.id(), List.of()), AuthorRef.of(row.author(), false, null, viewerId),
                         row.saveCount(), noteCounts.getOrDefault(row.id(), 0L), saved.contains(row.id()),
                         withPhoto.contains(row.id()), row.createdAt()))
-                .toList(), page.nextCursor(), page.hasMore());
+                .toList();
     }
 
     @Transactional(readOnly = true)
