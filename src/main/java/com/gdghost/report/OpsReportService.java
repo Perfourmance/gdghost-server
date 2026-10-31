@@ -19,6 +19,7 @@ import com.gdghost.common.page.OpsPage;
 import com.gdghost.notice.NoticeCommentModeration;
 import com.gdghost.question.ContentModeration;
 import com.gdghost.question.ContentModeration.Content;
+import com.gdghost.share.ShareModeration;
 
 /**
  * 운영 신고 목록 · 처리. 처리는 같은 대상의 신고를 함께 닫고, 작성자에게 알리지 않는다.
@@ -32,11 +33,13 @@ public class OpsReportService {
     private final OpsReportReader reader;
     private final ContentModeration moderation;
     private final NoticeCommentModeration noticeComments;
+    private final ShareModeration shares;
     private final OpsAuditLogger opsAudit;
     private final Clock clock;
 
     public OpsReportService(ReportRepository reports, OpsReportReader reader, ContentModeration moderation,
-            NoticeCommentModeration noticeComments, OpsAuditLogger opsAudit, Clock clock) {
+            NoticeCommentModeration noticeComments, ShareModeration shares, OpsAuditLogger opsAudit, Clock clock) {
+        this.shares = shares;
         this.reports = reports;
         this.reader = reader;
         this.moderation = moderation;
@@ -104,6 +107,7 @@ public class OpsReportService {
             case ANSWER -> moderation.lockAnswer(target.id());
             case NOTICE_COMMENT -> noticeComments.lock(target.id())
                     .map(c -> new Content(c.authorId(), false, c.deletedBy()));
+            case SHARE -> shares.lock(target.id()).map(s -> new Content(s.authorId(), false, s.deletedBy()));
             default -> Optional.empty();
         };
     }
@@ -113,6 +117,7 @@ public class OpsReportService {
             case QUESTION -> moderation.hideQuestion(target.id(), now);
             case ANSWER -> moderation.hideAnswer(target.id(), now);
             case NOTICE_COMMENT -> noticeComments.hide(target.id(), now);
+            case SHARE -> shares.hide(target.id(), now);
             default -> throw new IllegalStateException(target.type().name());
         }
     }
@@ -122,6 +127,7 @@ public class OpsReportService {
             case QUESTION -> moderation.restoreQuestion(target.id());
             case ANSWER -> moderation.restoreAnswer(target.id());
             case NOTICE_COMMENT -> noticeComments.restore(target.id());
+            case SHARE -> shares.restore(target.id());
             default -> throw new IllegalStateException(target.type().name());
         }
     }

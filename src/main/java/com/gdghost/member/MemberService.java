@@ -69,7 +69,7 @@ public class MemberService {
                 activityReader.stats(memberId));
     }
 
-    // TODO SHARE · FEED(9단계)
+    // TODO FEED(9단계)
     @Transactional(readOnly = true)
     public CursorPage<ActivityItem> activities(long viewerId, long memberId, ActivityType type, String cursor,
             int size) {
@@ -79,7 +79,8 @@ public class MemberService {
         List<ActivityItem.Row> rows = switch (type) {
             case ANSWER -> activityReader.answers(memberId, self, afterId, size + 1);
             case QUESTION -> activityReader.questions(memberId, self, afterId, size + 1);
-            case SHARE, FEED -> List.of();
+            case SHARE -> activityReader.shares(memberId, self, afterId, size + 1);
+            case FEED -> List.of();
         };
         CursorPage<ActivityItem.Row> page = CursorPage.of(rows, size, row -> String.valueOf(row.id()));
         return new CursorPage<>(page.items().stream().map(ActivityItem.Row::item).toList(), page.nextCursor(),

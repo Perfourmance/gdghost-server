@@ -69,6 +69,20 @@ public class MemberActivityReader {
                         rs.getObject("created_at", LocalDateTime.class).toInstant(ZoneOffset.UTC))));
     }
 
+    /** 공유에는 익명이 없다. anonymous는 다른 탭처럼 본인 조회일 때만 false로 내려간다 */
+    public List<ActivityItem.Row> shares(long memberId, boolean self, Long afterId, int limit) {
+        return jdbc.query("""
+                SELECT id, title, LEFT(body, :snippet) AS snippet, created_at
+                FROM share
+                WHERE author_id = :id AND deleted_at IS NULL AND (:afterId IS NULL OR id < :afterId)
+                ORDER BY id DESC
+                LIMIT :limit
+                """, params(memberId, self, afterId, limit), (rs, i) -> new ActivityItem.Row(
+                rs.getLong("id"), new ActivityItem(ActivityType.SHARE, rs.getLong("id"), rs.getString("title"),
+                        rs.getString("snippet"), false, self ? Boolean.FALSE : null,
+                        rs.getObject("created_at", LocalDateTime.class).toInstant(ZoneOffset.UTC))));
+    }
+
     private static MapSqlParameterSource params(long memberId, boolean includeAnonymous, Long afterId, int limit) {
         return new MapSqlParameterSource()
                 .addValue("id", memberId)

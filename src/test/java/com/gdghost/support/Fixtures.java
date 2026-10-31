@@ -150,6 +150,21 @@ public class Fixtures {
                 .longValue();
     }
 
+    /** 공유 (분류 TIP, 제목 '공유 N') */
+    public long share(long authorId) {
+        int n = SEQUENCE.incrementAndGet();
+        return new SimpleJdbcInsert(jdbc)
+                .withTableName("share")
+                .usingColumns("author_id", "category", "title", "body")
+                .usingGeneratedKeyColumns("id")
+                .executeAndReturnKey(Map.of(
+                        "author_id", authorId,
+                        "category", "TIP",
+                        "title", "공유 " + n,
+                        "body", "공유 본문입니다 " + n))
+                .longValue();
+    }
+
     /** OPEN 신고 (사유 '신고 사유') */
     public long report(long reporterId, String targetType, long targetId) {
         return new SimpleJdbcInsert(jdbc)

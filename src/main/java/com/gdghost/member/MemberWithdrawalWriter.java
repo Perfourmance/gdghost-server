@@ -50,6 +50,11 @@ public class MemberWithdrawalWriter {
                 JOIN certification c ON a.owner_type = 'CERT' AND a.owner_id = c.id
                 WHERE c.member_id = ?
                 """, memberId);
+        jdbc.update("""
+                DELETE a FROM attachment a
+                JOIN share s ON a.owner_type = 'SHARE' AND a.owner_id = s.id
+                WHERE s.author_id = ?
+                """, memberId);
         leaveRecruits(memberId, LocalDateTime.ofInstant(now, ZoneOffset.UTC));
     }
 

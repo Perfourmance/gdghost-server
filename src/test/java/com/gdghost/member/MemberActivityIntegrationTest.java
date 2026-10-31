@@ -131,12 +131,24 @@ class MemberActivityIntegrationTest {
     }
 
     @Test
-    void 공유_피드는_아직_빈_목록() throws Exception {
-        for (String type : new String[] { "SHARE", "FEED" }) {
-            mvc.perform(get("/api/v1/members/{id}/activities", other.id()).param("type", type).cookie(login))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.items", hasSize(0)));
-        }
+    void 피드는_아직_빈_목록() throws Exception {
+        mvc.perform(get("/api/v1/members/{id}/activities", other.id()).param("type", "FEED").cookie(login))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items", hasSize(0)));
+    }
+
+    @Test
+    void 공유_탭은_지운_글을_빼고_최신순() throws Exception {
+        long first = fixtures.share(other.id());
+        long second = fixtures.share(other.id());
+        long deleted = fixtures.share(other.id());
+        jdbc.update("UPDATE share SET deleted_at = NOW(6), deleted_by = 'AUTHOR' WHERE id = ?", deleted);
+
+        mvc.perform(get("/api/v1/members/{id}/activities", other.id()).param("type", "SHARE").cookie(login))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[*].targetId", contains((int) second, (int) first)))
+                .andExpect(jsonPath("$.items[0].type").value("SHARE"))
+                .andExpect(jsonPath("$.items[0].anonymous").doesNotExist());
     }
 
     @Test
