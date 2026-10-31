@@ -179,6 +179,17 @@ class ShareReader {
                 instant(rs, "created_at")));
     }
 
+    /** 방금 쓴 덧붙이기 하나 */
+    NoteRow note(long noteId) {
+        return jdbc.queryForObject("""
+                SELECT n.id, n.author_id, m.nickname, m.withdrawn_at IS NOT NULL AS withdrawn, n.body, n.created_at
+                FROM share_note n JOIN member m ON m.id = n.author_id
+                WHERE n.id = :id
+                """, Map.of("id", noteId), (rs, i) -> new NoteRow(rs.getLong("id"), rs.getLong("author_id"),
+                rs.getString("nickname"), rs.getBoolean("withdrawn"), rs.getString("body"),
+                instant(rs, "created_at")));
+    }
+
     private static String escapeLike(String text) {
         return text.replace("!", "!!").replace("%", "!%").replace("_", "!_");
     }

@@ -61,6 +61,7 @@ public class OpsReportReader {
         Map<Long, Target> answers = answers(ids(rows, ReportTargetType.ANSWER));
         Map<Long, Target> noticeComments = noticeComments(ids(rows, ReportTargetType.NOTICE_COMMENT));
         Map<Long, Target> shares = shares(ids(rows, ReportTargetType.SHARE));
+        Map<Long, Target> shareNotes = shareNotes(ids(rows, ReportTargetType.SHARE_NOTE));
         Map<ReportTargetType, Map<Long, Integer>> counts = new HashMap<>();
         for (ReportTargetType type : ReportTargetType.values()) {
             counts.put(type, counts(type, ids(rows, type)));
@@ -71,6 +72,7 @@ public class OpsReportReader {
                 case ANSWER -> answers.get(row.targetId());
                 case NOTICE_COMMENT -> noticeComments.get(row.targetId());
                 case SHARE -> shares.get(row.targetId());
+                case SHARE_NOTE -> shareNotes.get(row.targetId());
                 default -> null;
             };
             return new OpsReportResponse(row.id(), row.targetType(), row.targetId(),
@@ -132,6 +134,20 @@ public class OpsReportReader {
             long id = rs.getLong("id");
             targets.put(id, new Target(preview(rs.getString("title")), "/shares/" + id, rs.getString("deleted_by")));
         });
+        return targets;
+    }
+
+    private Map<Long, Target> shareNotes(List<Long> ids) {
+        Map<Long, Target> targets = new HashMap<>();
+        if (ids.isEmpty()) {
+            return targets;
+        }
+        jdbc.query("SELECT id, share_id, body, deleted_by FROM share_note WHERE id IN (:ids)", Map.of("ids", ids),
+                rs -> {
+                    long id = rs.getLong("id");
+                    targets.put(id, new Target(preview(rs.getString("body")),
+                            "/shares/" + rs.getLong("share_id") + "#note-" + id, rs.getString("deleted_by")));
+                });
         return targets;
     }
 

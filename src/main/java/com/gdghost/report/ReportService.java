@@ -15,6 +15,7 @@ import com.gdghost.notice.NoticeCommentModeration;
 import com.gdghost.question.AnswerRepository;
 import com.gdghost.question.QuestionRepository;
 import com.gdghost.share.ShareModeration;
+import com.gdghost.share.ShareNoteModeration;
 
 /** 신고 접수. 작성자 · 신고자에게 알리지 않는다 */
 @Service
@@ -25,12 +26,14 @@ public class ReportService {
     private final AnswerRepository answers;
     private final NoticeCommentModeration noticeComments;
     private final ShareModeration shares;
+    private final ShareNoteModeration shareNotes;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public ReportService(ReportRepository reports, QuestionRepository questions, AnswerRepository answers,
-            NoticeCommentModeration noticeComments, ShareModeration shares, ApplicationEventPublisher events,
-            Clock clock) {
+            NoticeCommentModeration noticeComments, ShareModeration shares, ShareNoteModeration shareNotes,
+            ApplicationEventPublisher events, Clock clock) {
+        this.shareNotes = shareNotes;
         this.reports = reports;
         this.questions = questions;
         this.answers = answers;
@@ -74,6 +77,7 @@ public class ReportService {
                     .isPresent();
             case NOTICE_COMMENT -> noticeComments.isLive(targetId);
             case SHARE -> shares.isLive(targetId);
+            case SHARE_NOTE -> shareNotes.isLive(targetId);
             default -> false;
         };
     }

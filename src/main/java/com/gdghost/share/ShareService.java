@@ -158,7 +158,7 @@ public class ShareService {
         return current.equals(new HashSet<>(tags));
     }
 
-    private static ShareDetail.Note note(ShareReader.NoteRow note, long viewerId) {
+    static ShareDetail.Note note(ShareReader.NoteRow note, long viewerId) {
         ShareDetail.NoteAuthor author = note.withdrawn()
                 ? new ShareDetail.NoteAuthor(null, AuthorRef.WITHDRAWN_NICKNAME)
                 : new ShareDetail.NoteAuthor(note.authorId(), note.nickname());

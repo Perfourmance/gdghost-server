@@ -20,6 +20,7 @@ import com.gdghost.notice.NoticeCommentModeration;
 import com.gdghost.question.ContentModeration;
 import com.gdghost.question.ContentModeration.Content;
 import com.gdghost.share.ShareModeration;
+import com.gdghost.share.ShareNoteModeration;
 
 /**
  * 운영 신고 목록 · 처리. 처리는 같은 대상의 신고를 함께 닫고, 작성자에게 알리지 않는다.
@@ -34,11 +35,14 @@ public class OpsReportService {
     private final ContentModeration moderation;
     private final NoticeCommentModeration noticeComments;
     private final ShareModeration shares;
+    private final ShareNoteModeration shareNotes;
     private final OpsAuditLogger opsAudit;
     private final Clock clock;
 
     public OpsReportService(ReportRepository reports, OpsReportReader reader, ContentModeration moderation,
-            NoticeCommentModeration noticeComments, ShareModeration shares, OpsAuditLogger opsAudit, Clock clock) {
+            NoticeCommentModeration noticeComments, ShareModeration shares, ShareNoteModeration shareNotes,
+            OpsAuditLogger opsAudit, Clock clock) {
+        this.shareNotes = shareNotes;
         this.shares = shares;
         this.reports = reports;
         this.reader = reader;
@@ -108,6 +112,7 @@ public class OpsReportService {
             case NOTICE_COMMENT -> noticeComments.lock(target.id())
                     .map(c -> new Content(c.authorId(), false, c.deletedBy()));
             case SHARE -> shares.lock(target.id()).map(s -> new Content(s.authorId(), false, s.deletedBy()));
+            case SHARE_NOTE -> shareNotes.lock(target.id()).map(n -> new Content(n.authorId(), false, n.deletedBy()));
             default -> Optional.empty();
         };
     }
@@ -118,6 +123,7 @@ public class OpsReportService {
             case ANSWER -> moderation.hideAnswer(target.id(), now);
             case NOTICE_COMMENT -> noticeComments.hide(target.id(), now);
             case SHARE -> shares.hide(target.id(), now);
+            case SHARE_NOTE -> shareNotes.hide(target.id(), now);
             default -> throw new IllegalStateException(target.type().name());
         }
     }
@@ -128,6 +134,7 @@ public class OpsReportService {
             case ANSWER -> moderation.restoreAnswer(target.id());
             case NOTICE_COMMENT -> noticeComments.restore(target.id());
             case SHARE -> shares.restore(target.id());
+            case SHARE_NOTE -> shareNotes.restore(target.id());
             default -> throw new IllegalStateException(target.type().name());
         }
     }
