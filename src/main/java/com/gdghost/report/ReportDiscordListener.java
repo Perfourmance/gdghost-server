@@ -9,6 +9,7 @@ import com.gdghost.common.discord.DiscordNotifier;
 import com.gdghost.common.event.DomainEventListener;
 import com.gdghost.notice.NoticeCommentModeration;
 import com.gdghost.question.AnswerRepository;
+import com.gdghost.share.ShareNoteModeration;
 
 /** 신고 접수 → 운영진 서버. 대상 종류 · 사유 · 링크, 신고자는 보내지 않는다 */
 @Component
@@ -17,11 +18,14 @@ public class ReportDiscordListener {
     private final ReportRepository reports;
     private final AnswerRepository answers;
     private final NoticeCommentModeration noticeComments;
+    private final ShareNoteModeration shareNotes;
     private final DiscordNotifier discord;
     private final String webUrl;
 
     public ReportDiscordListener(ReportRepository reports, AnswerRepository answers,
-            NoticeCommentModeration noticeComments, DiscordNotifier discord, @Value("${web.url}") String webUrl) {
+            NoticeCommentModeration noticeComments, ShareNoteModeration shareNotes, DiscordNotifier discord,
+            @Value("${web.url}") String webUrl) {
+        this.shareNotes = shareNotes;
         this.reports = reports;
         this.answers = answers;
         this.noticeComments = noticeComments;
@@ -47,6 +51,9 @@ public class ReportDiscordListener {
                     .map(noticeId -> webUrl + "/notices/" + noticeId + "#comment-" + id)
                     .orElse(null);
             case SHARE -> webUrl + "/shares/" + id;
+            case SHARE_NOTE -> shareNotes.shareId(id)
+                    .map(shareId -> webUrl + "/shares/" + shareId + "#note-" + id)
+                    .orElse(null);
             default -> null;
         };
     }

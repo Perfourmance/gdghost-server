@@ -19,6 +19,10 @@ public record NotificationTarget(String type, long id, String subType, Long subI
         return new NotificationTarget("NOTICE", noticeId, null, null);
     }
 
+    public static NotificationTarget shareNote(long shareId, long noteId) {
+        return new NotificationTarget("SHARE", shareId, "NOTE", noteId);
+    }
+
     public static NotificationTarget schedule(long scheduleId) {
         return new NotificationTarget("SCHEDULE", scheduleId, null, null);
     }
