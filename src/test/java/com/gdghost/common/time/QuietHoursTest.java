@@ -1,4 +1,4 @@
-package com.gdghost.notice;
+package com.gdghost.common.time;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

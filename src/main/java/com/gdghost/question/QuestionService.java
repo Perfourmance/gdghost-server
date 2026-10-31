@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.gdghost.common.error.BusinessException;
 import com.gdghost.common.error.ErrorCode;
+import com.gdghost.common.error.ErrorField;
 import com.gdghost.common.page.CursorPage;
 import com.gdghost.common.security.AuthMember;
 
@@ -23,25 +24,31 @@ public class QuestionService {
     private final QuestionDetailReader detailReader;
     private final QuestionViewCounter viewCounter;
     private final QuestionNotifier notifier;
+    private final RoutingPort routing;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public QuestionService(QuestionRepository questions, QuestionAnonAliasWriter aliasWriter,
             QuestionListReader listReader, QuestionDetailReader detailReader, QuestionViewCounter viewCounter,
-            QuestionNotifier notifier, ApplicationEventPublisher events, Clock clock) {
+            QuestionNotifier notifier, RoutingPort routing, ApplicationEventPublisher events, Clock clock) {
         this.questions = questions;
         this.aliasWriter = aliasWriter;
         this.listReader = listReader;
         this.detailReader = detailReader;
         this.viewCounter = viewCounter;
         this.notifier = notifier;
+        this.routing = routing;
         this.events = events;
         this.clock = clock;
     }
 
-    // TODO 선배 지목(7)
+    /** 지목한 선배를 쓸 수 없으면 실패시키지 않고 FALLBACK — 쓴 글을 잃지 않게 */
     @Transactional
     public QuestionCreatedResponse create(long authorId, QuestionCreateRequest request) {
+        if (request.targetMemberId() != null && request.targetMemberId() == authorId) {
+            throw new BusinessException(ErrorCode.VALIDATION_FAILED, null,
+                    List.of(new ErrorField("targetMemberId", "본인을 지목할 수 없습니다.")));
+        }
         Question question = questions.save(Question.write(authorId, request.category(), request.title(),
                 request.body(), request.isAnonymous(), clock.instant()));
         if (question.isAnonymous()) {
@@ -49,7 +56,9 @@ public class QuestionService {
         }
         notifier.questionCreated(question);
         events.publishEvent(new QuestionCreatedEvent(question.getId()));
-        return new QuestionCreatedResponse(detail(find(question.getId()), authorId), null);
+        DirectDelivery direct = request.targetMemberId() == null ? null
+                : routing.direct(question, request.targetMemberId());
+        return new QuestionCreatedResponse(detail(find(question.getId()), authorId), direct);
     }
 
     /** 비회원(me == null)은 게스트 모양 */
@@ -142,7 +151,8 @@ public class QuestionService {
                 question.state(), question.adoptedAnswerId(), question.editedAfterAnswer(), question.viewCount(),
                 question.createdAt(), question.updatedAt() != null ? question.updatedAt() : question.createdAt(),
                 mine, !mine, question.anonymous(),
-                AnswerTree.build(detailReader.answers(question.id()), question.adoptedAnswerId(), viewerId), null);
+                AnswerTree.build(detailReader.answers(question.id()), question.adoptedAnswerId(), viewerId),
+                routing.view(question.id(), question.anonymous(), viewerId));
     }
 
     private static Long afterId(String cursor) {

@@ -2,7 +2,9 @@ package com.gdghost.embedding;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -33,6 +35,28 @@ public class EmbeddingStore {
                 SELECT COUNT(*) FROM question_embedding WHERE question_id = ? AND model = ?
                 """, Integer.class, questionId, model);
         return count != null && count > 0;
+    }
+
+    public Optional<float[]> questionVector(long questionId, String model) {
+        return jdbc.query("SELECT vector FROM question_embedding WHERE question_id = ? AND model = ?",
+                (rs, i) -> vector(rs.getString("vector")), questionId, model).stream().findFirst();
+    }
+
+    /** 활동 중 부원 벡터 전부. 후보 수가 적어 메모리에서 계산한다 (AI 매칭 설계 5장) */
+    public Map<Long, float[]> activeMemberVectors(String model) {
+        Map<Long, float[]> vectors = new HashMap<>();
+        jdbc.query("""
+                SELECT me.member_id, me.vector FROM member_embedding me
+                JOIN member m ON m.id = me.member_id
+                WHERE me.model = ? AND m.withdrawn_at IS NULL AND m.suspended_at IS NULL
+                """, rs -> {
+            vectors.put(rs.getLong("member_id"), vector(rs.getString("vector")));
+        }, model);
+        return vectors;
+    }
+
+    public float[] vector(String stored) {
+        return json.readValue(stored, float[].class);
     }
 
     public Optional<MemberRow> member(long memberId) {
