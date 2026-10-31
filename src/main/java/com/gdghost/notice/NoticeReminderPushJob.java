@@ -8,6 +8,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import com.gdghost.common.batch.BatchRunner;
+import com.gdghost.common.time.QuietHours;
 import com.gdghost.notification.NotificationPushEvent;
 import com.gdghost.notification.NotificationPusher;
 import com.gdghost.notification.NotificationTarget;

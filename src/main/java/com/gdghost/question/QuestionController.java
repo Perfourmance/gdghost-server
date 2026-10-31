@@ -41,7 +41,7 @@ public class QuestionController {
     }
 
     @Operation(summary = "질문 작성", description = "Idempotency-Key 필수. 익명 여부는 나중에 바꿀 수 없다. 부원당 분당 3회 · 하루 30회(첫 작성부터 24시간). "
-            + "선배 지목(targetMemberId)은 7단계부터라 directDelivery는 지금 항상 null.")
+            + "targetMemberId(선배 지목)가 있으면 directDelivery: SENT · SCHEDULED(22–08시) · FALLBACK(받을 수 없음 → 일반 라우팅).")
     @Idempotent
     @RateLimit(limit = 3)
     @RateLimit(limit = 30, unit = ChronoUnit.DAYS)
@@ -66,7 +66,7 @@ public class QuestionController {
     }
 
     @Operation(summary = "질문 상세", description = "답변 트리 포함(채택 먼저, 나머지 오래된 순, depth 3까지). "
-            + "조회수는 부원당 하루 1회, 글쓴이 본인은 세지 않는다. 없거나 삭제 · 숨김이면 404. routing은 7단계부터.")
+            + "조회수는 부원당 하루 1회, 글쓴이 본인은 세지 않는다. 없거나 삭제 · 숨김이면 404. routing은 전달 현황, 없으면 null. 익명 질문은 reasons 빈 배열 + reasonsHidden.")
     @GetMapping("/{questionId}")
     public QuestionDetail detail(@AuthenticationPrincipal AuthMember me, @PathVariable long questionId) {
         return questionService.detail(me.id(), questionId);

@@ -218,7 +218,7 @@ class EmbeddingIntegrationTest {
 
     private long created(String title) {
         return questions.create(member.id(),
-                new QuestionCreateRequest(QuestionCategory.JOB, title, "본문", false)).question().id();
+                new QuestionCreateRequest(QuestionCategory.JOB, title, "본문", false, null)).question().id();
     }
 
     private void patchQuestion(long id, String json) throws Exception {
