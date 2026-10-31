@@ -1,9 +1,9 @@
 package com.gdghost.question;
 
 /** 익명 표기. 번호는 question_anon_alias 기준(글 단위) — 0이 글쓴이 */
-final class AnonLabels {
+public final class AnonLabels {
 
-    static final String QUESTION_AUTHOR = "익명";
+    public static final String QUESTION_AUTHOR = "익명";
 
     private AnonLabels() {
     }
