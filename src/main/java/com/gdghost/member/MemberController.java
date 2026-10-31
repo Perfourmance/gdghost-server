@@ -44,7 +44,7 @@ public class MemberController {
     }
 
     @Operation(summary = "프로필 활동 기록", description = "type 필수. 익명 글은 남이 볼 때 빠지고, 본인 조회일 때만 "
-            + "anonymous와 함께 포함. FEED는 9단계부터.")
+            + "anonymous와 함께 포함.")
     @GetMapping("/{memberId}/activities")
     public CursorPage<ActivityItem> activities(@AuthenticationPrincipal AuthMember me, @PathVariable long memberId,
             @RequestParam ActivityType type,

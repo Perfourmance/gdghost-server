@@ -131,10 +131,18 @@ class MemberActivityIntegrationTest {
     }
 
     @Test
-    void 피드는_아직_빈_목록() throws Exception {
+    void 피드_탭은_지운_글을_빼고_최신순() throws Exception {
+        long first = fixtures.feedPost(other.id());
+        long second = fixtures.feedPost(other.id());
+        long deleted = fixtures.feedPost(other.id());
+        jdbc.update("UPDATE feed_post SET deleted_at = NOW(6), deleted_by = 'AUTHOR' WHERE id = ?", deleted);
+
         mvc.perform(get("/api/v1/members/{id}/activities", other.id()).param("type", "FEED").cookie(login))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.items", hasSize(0)));
+                .andExpect(jsonPath("$.items[*].targetId", contains((int) second, (int) first)))
+                .andExpect(jsonPath("$.items[0].type").value("FEED"))
+                .andExpect(jsonPath("$.items[0].title").isEmpty())
+                .andExpect(jsonPath("$.items[0].snippet").exists());
     }
 
     @Test

@@ -23,7 +23,6 @@ public class MemberWithdrawalWriter {
                 Long.class).size();
     }
 
-    // TODO 피드 사진 R2 삭제(업로드 단계)
     public void erase(long memberId, String email, Instant now) {
         jdbc.update("DELETE FROM member_contact WHERE member_id = ?", memberId);
         jdbc.update("DELETE FROM member_tag WHERE member_id = ?", memberId);
@@ -54,6 +53,11 @@ public class MemberWithdrawalWriter {
                 DELETE a FROM attachment a
                 JOIN share s ON a.owner_type = 'SHARE' AND a.owner_id = s.id
                 WHERE s.author_id = ?
+                """, memberId);
+        jdbc.update("""
+                DELETE a FROM attachment a
+                JOIN feed_post p ON a.owner_type = 'FEED' AND a.owner_id = p.id
+                WHERE p.author_id = ?
                 """, memberId);
         leaveRecruits(memberId, LocalDateTime.ofInstant(now, ZoneOffset.UTC));
     }
