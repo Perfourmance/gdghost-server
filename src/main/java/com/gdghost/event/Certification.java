@@ -44,6 +44,19 @@ public class Certification {
         return certification;
     }
 
+    void approve(long staffId, Instant now) {
+        state = CertificationState.APPROVED;
+        reviewedBy = staffId;
+        reviewedAt = now;
+    }
+
+    void reject(long staffId, String reason, Instant now) {
+        state = CertificationState.REJECTED;
+        rejectReason = reason;
+        reviewedBy = staffId;
+        reviewedAt = now;
+    }
+
     /** 검토 기록을 비우고 다시 확인 대기로. body가 null이면 그대로 */
     void resubmit(String body, Instant now) {
         if (body != null) {
