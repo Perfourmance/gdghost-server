@@ -550,7 +550,7 @@ class RoutingIntegrationTest {
     @Test
     void 삼일_넘은_질문을_09시에_요약하고_없으면_보내지_않는다() {
         OpsDigestJob digest = new OpsDigestJob(batch, reader, discord, new MutableClock(DAY));
-        question(hours(71));
+        long notYet = question(hours(71));
 
         digest.run();
         assertThat(discordGateway.after(Duration.ofMillis(200), message -> message.channel() == DiscordChannel.STAFF))
@@ -560,8 +560,51 @@ class RoutingIntegrationTest {
         String title = jdbc.queryForObject("SELECT title FROM question WHERE id = ?", String.class, stale);
         digest.run();
 
-        var sent = discordGateway.await(message -> message.is(DiscordChannel.STAFF, "3일 넘게 답이 없는 질문 1건"));
+        var sent = discordGateway.await(message -> message.is(DiscordChannel.STAFF, "3일 넘게 답이 없는 질문 1건 추가 (전체 1건)"));
         assertThat(sent.message().description()).contains(title.split(" ")[0]);
+        discordGateway.clear();
+
+        // 하루 더 지난 질문은 다시 적지 않는다
+        jdbc.update("UPDATE question SET state = 'ANSWERED' WHERE id = ?", notYet);
+        OpsDigestJob nextDay = new OpsDigestJob(batch, reader, discord, new MutableClock(DAY.plus(Duration.ofDays(1))));
+        nextDay.run();
+        assertThat(discordGateway.after(Duration.ofMillis(200), message -> message.channel() == DiscordChannel.STAFF))
+                .isEmpty();
+    }
+
+    @Test
+    void 처음_받은_사람이_무응답이면_더_보내지_않는다() {
+        for (int i = 0; i < 4; i++) {
+            candidate("인턴");
+        }
+        long question = question(hours(3));
+
+        route(DAY);
+        route(DAY.plus(Duration.ofHours(5)));
+
+        assertThat(memberRows(question)).hasSize(3);
+    }
+
+    @Test
+    void 지목받은_선배가_24시간_무응답이면_일반_라우팅을_시작하고_다시_보내지_않는다() {
+        fixtures.staff();
+        TestMember target = candidate("인턴");
+        TestMember other = candidate("인턴");
+        long question = question(hours(30));
+        jdbc.update("""
+                INSERT INTO routing (question_id, member_id, stage, state, sent_at) VALUES (?, ?, 'DIRECT', 'SENT', ?)
+                """, question, target.id(), utc(DAY.minus(hours(24)).plus(Duration.ofMinutes(1))));
+
+        route(DAY);
+        assertThat(rows(question)).hasSize(1);
+
+        route(DAY.plus(Duration.ofMinutes(10)));
+
+        assertThat(memberRows(question)).extracting(row -> row.get("member_id")).containsExactly(other.id());
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM routing WHERE question_id = ? AND stage = 'STAFF'",
+                Integer.class, question)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT state FROM routing WHERE question_id = ? AND stage = 'DIRECT'",
+                String.class, question)).isEqualTo("SENT");
     }
 
     private void route(Instant now) {
@@ -570,7 +613,7 @@ class RoutingIntegrationTest {
                 members, clock);
         RoutingDelivery delivery = new RoutingDelivery(candidates, config, reader, writer, questions, members,
                 notifications, discord, aiLog, embeddingService, transaction, "https://gdghost.test", clock);
-        new RoutingJob(batch, delivery, reader, clock).run();
+        new RoutingJob(batch, delivery, config, reader, clock).run();
     }
 
     private DirectDelivery direct(long questionId, long target, Instant now) {

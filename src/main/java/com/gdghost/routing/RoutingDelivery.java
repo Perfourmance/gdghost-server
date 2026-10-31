@@ -70,11 +70,13 @@ public class RoutingDelivery {
     }
 
     /** @return 알림을 보낸 부원 수. 후보가 없으면 0이고 다음 배치에서 다시 계산한다 */
-    int sendToMembers(long questionId) {
-        Question question = questions.findById(questionId).orElse(null);
-        if (question == null) {
+    int sendToMembers(RoutingReader.Waiting waiting) {
+        int slots = waiting.slots(config);
+        Question question = questions.findById(waiting.id()).orElse(null);
+        if (question == null || slots == 0) {
             return 0;
         }
+        long questionId = waiting.id();
         RoutingCandidateService.Ranked ranked = candidates.rank(question);
         if (ranked.candidates().isEmpty()) {
             return 0;
@@ -85,8 +87,9 @@ public class RoutingDelivery {
             if (locked == null) {
                 return List.<CandidateScorer.Scored>of();
             }
-            List<CandidateScorer.Scored> receivers = lockReceivers(ranked.candidates(), now);
-            writer.insertMembers(questionId, receivers, config.version(), now);
+            List<CandidateScorer.Scored> receivers = lockReceivers(ranked.candidates(), now).stream()
+                    .limit(slots).toList();
+            writer.insertMembers(questionId, receivers, !waiting.isFirstRound(), config.version(), now);
             notifications.toMembers(receivers.stream().map(CandidateScorer.Scored::memberId).toList(),
                     NotificationType.ROUTED, ROUTED_TITLE, locked.getTitle(), NotificationTarget.question(questionId),
                     true);

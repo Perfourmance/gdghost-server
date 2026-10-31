@@ -14,6 +14,7 @@ import com.gdghost.embedding.EmbeddingStore;
 import com.gdghost.member.Member;
 import com.gdghost.member.MemberRepository;
 import com.gdghost.question.Question;
+import com.gdghost.question.QuestionCategory;
 
 /**
  * 후보 1–3명 계산. 보내기 직전에 부른다 — 알림 설정 · 하루 3건 · 연속 지목 · 재시도로 채워진 벡터가 그 시점 값으로 반영된다.
@@ -25,6 +26,8 @@ public class RoutingCandidateService {
     /** @param ruleOnly 질문 벡터가 없어 규칙 점수로 대체했다 */
     record Ranked(List<CandidateScorer.Scored> candidates, boolean ruleOnly) {
     }
+
+    private static final long NO_QUESTION = -1;
 
     private final MatchingConfig config;
     private final CandidateScorer scorer;
@@ -75,21 +78,43 @@ public class RoutingCandidateService {
         List<RoutingReader.PoolMember> pool = reader.pool(question.getAuthorId()).stream()
                 .filter(member -> !routed.contains(member.id()) && !previous.contains(member.id()))
                 .toList();
-        List<Long> ids = pool.stream().map(RoutingReader.PoolMember::id).toList();
-        Map<Long, Integer> today = reader.receivedToday(ids, now);
+        Map<Long, Integer> today = reader.receivedToday(ids(pool), now);
+        return build(pool.stream()
+                .filter(member -> today.getOrDefault(member.id(), 0) < RoutingReader.DAILY_LIMIT)
+                .toList(), question.getId(), model, Map.of());
+    }
+
+    /** 선배 찾기. 알림을 보내지 않으므로 하루 3건 · 연속 지목은 보지 않는다 */
+    List<CandidateScorer.Scored> rankForSearch(long memberId, QuestionCategory category, float[] vector,
+            long interestTagId, String interestName) {
+        List<RoutingReader.PoolMember> pool = reader.pool(memberId);
+        Map<Long, String> interests = reader.matchedInterests(ids(pool), interestTagId, interestName);
+        CandidateScorer.Questioner questioner = members.findById(memberId)
+                .map(RoutingCandidateService::questioner).orElse(null);
+        Instant now = clock.instant();
+        return scorer.rank(new CandidateScorer.QuestionInput(category, vector, questioner),
+                build(pool, NO_QUESTION, embeddings.modelId(), interests), now);
+    }
+
+    private List<CandidateScorer.Candidate> build(List<RoutingReader.PoolMember> pool, long questionId, String model,
+            Map<Long, String> interests) {
+        List<Long> ids = ids(pool);
         Map<Long, List<String>> experiences = reader.experiences(ids);
         Map<Long, float[]> vectors = embeddingStore.activeMemberVectors(model);
-        Map<Long, List<CandidateScorer.PastAnswer>> past = reader.pastAnswers(ids, question.getId(), model);
+        Map<Long, List<CandidateScorer.PastAnswer>> past = reader.pastAnswers(ids, questionId, model);
         Map<Long, Integer> answers = reader.answerCounts(ids);
         Map<Long, Integer> passes = reader.passCounts(ids);
         return pool.stream()
-                .filter(member -> today.getOrDefault(member.id(), 0) < RoutingReader.DAILY_LIMIT)
                 .map(member -> new CandidateScorer.Candidate(member.id(), member.department(), member.position(),
                         member.generation(), member.status(), experiences.getOrDefault(member.id(), List.of()),
                         vectors.get(member.id()), past.getOrDefault(member.id(), List.of()),
                         answers.getOrDefault(member.id(), 0), passes.getOrDefault(member.id(), 0),
-                        member.lastSeenAt()))
+                        member.lastSeenAt(), interests.get(member.id())))
                 .toList();
+    }
+
+    private static List<Long> ids(List<RoutingReader.PoolMember> pool) {
+        return pool.stream().map(RoutingReader.PoolMember::id).toList();
     }
 
 }

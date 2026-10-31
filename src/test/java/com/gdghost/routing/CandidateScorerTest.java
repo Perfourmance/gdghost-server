@@ -27,8 +27,8 @@ class CandidateScorerTest {
     private static final float[] ORTHOGONAL = vector(1, -1);
 
     private final MatchingConfig config = new MatchingConfig("v1", new MatchingConfig.Weights(0.4, 0.3, 0.3),
-            new MatchingConfig.Rule(0.6, 0.2, 0.1, 0.1), new MatchingConfig.History(0.1, 0.6),
-            new MatchingConfig.Activity(10, 0.01, 30, 0.05, 0.05), 0.15, 3, false,
+            new MatchingConfig.Rule(0.6, 0.3, 0.2, 0.1, 0.1), new MatchingConfig.History(0.1, 0.6),
+            new MatchingConfig.Activity(10, 0.01, 30, 0.05, 0.05), 0.15, 3, 5, 24, false,
             Map.of(QuestionCategory.JOB, List.of("인턴", "해커톤")));
     private final CandidateScorer scorer = new CandidateScorer(config);
 

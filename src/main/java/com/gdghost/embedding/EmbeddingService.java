@@ -105,6 +105,25 @@ public class EmbeddingService {
         return Outcome.SAVED;
     }
 
+    /** 선배 찾기. 저장하지 않고, 실패하면 비어 있어 규칙 점수로 대체한다. 호출한 부원 id만 남기고 글은 남기지 않는다 */
+    public Optional<float[]> embedForSearch(String text, long memberId) {
+        if (!client.enabled()) {
+            return Optional.empty();
+        }
+        long startedAt = System.nanoTime();
+        try {
+            float[] vector = client.embed(List.of(text)).getFirst();
+            aiLog.record(AiLogWriter.Kind.FIND_SENIOR, memberId, client.modelId(), latency(startedAt),
+                    AiLogWriter.State.SUCCESS);
+            return Optional.of(vector);
+        } catch (EmbeddingException e) {
+            aiLog.record(AiLogWriter.Kind.FIND_SENIOR, memberId, client.modelId(), latency(startedAt),
+                    AiLogWriter.State.FALLBACK);
+            errorLog.record(e, "embedding " + AiLogWriter.Kind.FIND_SENIOR);
+            return Optional.empty();
+        }
+    }
+
     private Optional<String> questionText(long questionId) {
         return questions.findById(questionId)
                 .filter(question -> !question.isDeleted())
