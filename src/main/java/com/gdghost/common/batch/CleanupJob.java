@@ -13,6 +13,7 @@ public class CleanupJob {
 
     static final String NAME = "cleanup_nightly";
     private static final String ROUTING_JOB = "routing_10min";
+    private static final String RECRUIT_CLOSE_JOB = "recruit_close_10min";
 
     private final BatchRunner batch;
     private final JdbcTemplate jdbc;
@@ -36,8 +37,8 @@ public class CleanupJob {
         int batches = jdbc.update("""
                 DELETE FROM batch_log
                 WHERE started_at < ?
-                   OR (job_name = ? AND state = 'SUCCESS' AND started_at < ?)
-                """, now.minusDays(90), ROUTING_JOB, now.minusDays(30));
+                   OR (job_name IN (?, ?) AND state = 'SUCCESS' AND started_at < ?)
+                """, now.minusDays(90), ROUTING_JOB, RECRUIT_CLOSE_JOB, now.minusDays(30));
         int ai = jdbc.update("DELETE FROM ai_log WHERE created_at < ?", now.minusYears(1));
         return "notification=%d error_log=%d batch_log=%d ai_log=%d".formatted(notifications, errors, batches, ai);
     }
