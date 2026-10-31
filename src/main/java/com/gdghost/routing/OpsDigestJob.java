@@ -14,7 +14,7 @@ import com.gdghost.common.discord.DiscordChannel;
 import com.gdghost.common.discord.DiscordMessage;
 import com.gdghost.common.discord.DiscordNotifier;
 
-/** 운영진 09시 요약. 지금은 3일 넘게 답이 없는 질문만, 인증 확인 대기는 M10에서 더한다 */
+/** 운영진 09시 요약. 3일 넘게 답이 없는 질문 · 인증 확인 대기 */
 @Component
 public class OpsDigestJob {
 
@@ -53,7 +53,11 @@ public class OpsDigestJob {
             discord.send(DiscordChannel.STAFF, new DiscordMessage(
                     "3일 넘게 답이 없는 질문 " + fresh.size() + "건 추가 (전체 " + stale.size() + "건)", null, titles));
         }
-        return "stale=%d new=%d".formatted(stale.size(), fresh.size());
+        long pending = reader.pendingCertifications();
+        if (pending > 0) {
+            discord.send(DiscordChannel.STAFF, new DiscordMessage("인증 확인 대기 " + pending + "건", null, null));
+        }
+        return "stale=%d new=%d pending=%d".formatted(stale.size(), fresh.size(), pending);
     }
 
 }

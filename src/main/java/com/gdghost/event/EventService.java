@@ -78,7 +78,7 @@ public class EventService {
                 reader.count(eventId, viewer.id(), CertificationState.APPROVED),
                 reader.count(eventId, viewer.id(), CertificationState.PENDING),
                 reader.rejected(eventId, viewer.id()));
-        Long pending = viewer.role() == Role.STAFF ? reader.count(eventId, null, CertificationState.PENDING) : null;
+        Long pending = viewer.role() == Role.STAFF ? reader.pendingForStaff(eventId) : null;
         return new EventDetail(event.id(), event.name(), event.description(), event.requirement(),
                 guideSteps(event.guideSteps()), event.startDate(), event.endDate(),
                 EventState.of(event.startDate(), event.endDate(), today()), my, ranking(eventId), pending);
