@@ -88,6 +88,22 @@ class ScheduleReader {
                         rs.getObject("deadline", LocalDate.class)));
     }
 
+    record Meeting(long id, String title) {
+    }
+
+    /** 만나는 시각이 이 범위(UTC)에 드는 모집 */
+    List<Meeting> recruitsMeeting(LocalDateTime from, LocalDateTime before) {
+        return jdbc.query("""
+                SELECT id, title FROM recruit WHERE meet_at >= :from AND meet_at < :before ORDER BY id
+                """, Map.of("from", from, "before", before),
+                (rs, i) -> new Meeting(rs.getLong("id"), rs.getString("title")));
+    }
+
+    List<Long> recruitParticipants(long recruitId) {
+        return jdbc.queryForList("SELECT member_id FROM recruit_member WHERE recruit_id = :id",
+                Map.of("id", recruitId), Long.class);
+    }
+
     /** 이 일정에 연결된 모집에 참여한 부원 */
     List<Long> participants(long scheduleId) {
         return jdbc.queryForList("""

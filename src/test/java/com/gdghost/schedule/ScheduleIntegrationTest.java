@@ -338,7 +338,7 @@ class ScheduleIntegrationTest {
         long d1 = schedule(member.id(), "JOB", "하루전", today.minusDays(2), today.plusDays(1));
         single(member.id(), "JOB", "이틀전", today.plusDays(2));
         long startsSoonButLong = schedule(member.id(), "JOB", "시작만 임박", today.plusDays(1), today.plusDays(9));
-        long recruit = recruit(member.id(), d3, 1, 4, LocalDateTime.now(ZoneOffset.UTC).plusDays(1));
+        long recruit = recruit(member.id(), d3, 1, 4, LocalDateTime.now(ZoneOffset.UTC).plusDays(2));
         jdbc.update("INSERT INTO recruit_member (recruit_id, member_id) VALUES (?, ?)", recruit, member.id());
         TestMember outsider = fixtures.member();
         subscribe(member);
@@ -358,7 +358,37 @@ class ScheduleIntegrationTest {
         assertThat(push.await(pushed -> pushed.payload().contains("DEADLINE"), 1)).hasSize(1);
         assertThat(jdbc.queryForObject("""
                 SELECT message FROM batch_log WHERE job_name = 'deadline_daily_09' AND state = 'SUCCESS'
-                """, String.class)).isEqualTo("due=2 notified=1");
+                """, String.class)).isEqualTo("due=2 recruits=0 notified=1");
+    }
+
+    @Test
+    void 배치는_만나는_날이_D3_D1인_모집의_참여자에게_알린다() {
+        long soon = recruit(member.id(), meetingIn(1));
+        long later = recruit(staff.id(), meetingIn(3));
+        long notYet = recruit(member.id(), meetingIn(2));
+
+        job.run();
+
+        assertThat(jdbc.queryForList("""
+                SELECT target_id FROM notification WHERE type = 'DEADLINE' AND target_type = 'RECRUIT' ORDER BY target_id
+                """, Long.class)).containsExactly(soon, later).doesNotContain(notYet);
+        assertThat(jdbc.queryForObject("SELECT title FROM notification WHERE target_id = ?", String.class, soon))
+                .isEqualTo("모집 D-1");
+    }
+
+    private LocalDateTime meetingIn(int days) {
+        return LocalDateTime.ofInstant(today.plusDays(days).atTime(12, 0).atZone(ZoneId.of("Asia/Seoul")).toInstant(),
+                ZoneOffset.UTC);
+    }
+
+    private long recruit(long authorId, LocalDateTime meetAt) {
+        long id = new SimpleJdbcInsert(jdbc).withTableName("recruit").usingGeneratedKeyColumns("id")
+                .usingColumns("author_id", "kind", "title", "meet_at", "capacity", "joined_count")
+                .executeAndReturnKey(Map.of("author_id", authorId, "kind", "TAXI", "title", "택시", "meet_at", meetAt,
+                        "capacity", 4, "joined_count", 1))
+                .longValue();
+        jdbc.update("INSERT INTO recruit_member (recruit_id, member_id) VALUES (?, ?)", id, authorId);
+        return id;
     }
 
     @Test

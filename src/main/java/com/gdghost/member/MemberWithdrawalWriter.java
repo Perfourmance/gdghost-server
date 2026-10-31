@@ -1,6 +1,8 @@
 package com.gdghost.member;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -42,6 +44,30 @@ public class MemberWithdrawalWriter {
                 UPDATE routing SET state = 'CANCELED', responded_at = ?
                 WHERE member_id = ? AND state = 'CANDIDATE'
                 """, now, memberId);
+        leaveRecruits(memberId, LocalDateTime.ofInstant(now, ZoneOffset.UTC));
+    }
+
+    /** 만나기 전 모집의 자리를 비우고 직접 연 모집은 닫는다. 지난 모집의 참여 기록은 남긴다 */
+    private void leaveRecruits(long memberId, LocalDateTime now) {
+        // 한 문장에서 state와 count를 함께 바꾸면 적용 순서가 보장되지 않아 나눈다
+        jdbc.update("""
+                UPDATE recruit r
+                JOIN recruit_member rm ON rm.recruit_id = r.id AND rm.member_id = ?
+                SET r.state = 'OPEN'
+                WHERE r.meet_at > ? AND r.author_id <> ? AND r.state = 'CLOSED' AND r.joined_count >= r.capacity
+                """, memberId, now, memberId);
+        jdbc.update("""
+                UPDATE recruit r
+                JOIN recruit_member rm ON rm.recruit_id = r.id AND rm.member_id = ?
+                SET r.joined_count = r.joined_count - 1
+                WHERE r.meet_at > ? AND r.author_id <> ?
+                """, memberId, now, memberId);
+        jdbc.update("""
+                DELETE rm FROM recruit_member rm
+                JOIN recruit r ON r.id = rm.recruit_id
+                WHERE rm.member_id = ? AND r.meet_at > ? AND r.author_id <> ?
+                """, memberId, now, memberId);
+        jdbc.update("UPDATE recruit SET state = 'CLOSED' WHERE author_id = ? AND state = 'OPEN'", memberId);
     }
 
 }

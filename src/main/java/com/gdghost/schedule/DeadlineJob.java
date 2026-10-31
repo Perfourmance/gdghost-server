@@ -2,7 +2,9 @@ package com.gdghost.schedule;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -20,7 +22,7 @@ import com.gdghost.notification.NotificationTarget;
 import com.gdghost.notification.NotificationType;
 import com.gdghost.notification.NotificationWriter;
 
-/** 매일 09시 D-3 · D-1 일정을 부원 채널에 묶어 올리고, 연결된 모집 참여자에게 개인 알림 */
+/** 매일 09시 D-3 · D-1. 일정은 부원 채널에 묶어 올리고 연결된 모집 참여자에게, 모집은 만나는 날 기준으로 참여자에게 개인 알림 */
 @Component
 public class DeadlineJob {
 
@@ -56,22 +58,38 @@ public class DeadlineJob {
     private String notifyDue() {
         LocalDate today = LocalDate.now(clock.withZone(KST));
         List<ScheduleReader.Due> due = reader.dueOn(List.of(today.plusDays(1), today.plusDays(3)));
-        if (due.isEmpty()) {
-            return "due=0 notified=0";
+        if (!due.isEmpty()) {
+            discord.send(DiscordChannel.MEMBER, new DiscordMessage("마감 임박 일정 " + due.size() + "건", null,
+                    lines(due, today)));
         }
-        discord.send(DiscordChannel.MEMBER, new DiscordMessage("마감 임박 일정 " + due.size() + "건", null,
-                lines(due, today)));
-
         int notified = 0;
         for (ScheduleReader.Due schedule : due) {
             List<Long> members = reader.participants(schedule.id());
+            notify(members, "마감 임박 " + label(schedule, today), schedule.title(),
+                    NotificationTarget.schedule(schedule.id()));
             notified += members.size();
-            // 푸시는 커밋 후에 나가므로 일정마다 트랜잭션으로 묶는다
-            transaction.executeWithoutResult(status -> notifications.toMembers(members, NotificationType.DEADLINE,
-                    "마감 임박 " + label(schedule, today), schedule.title(),
-                    NotificationTarget.schedule(schedule.id()), true));
         }
-        return "due=%d notified=%d".formatted(due.size(), notified);
+        int recruits = 0;
+        for (int days : List.of(1, 3)) {
+            LocalDate date = today.plusDays(days);
+            for (ScheduleReader.Meeting recruit : reader.recruitsMeeting(utcStart(date), utcStart(date.plusDays(1)))) {
+                List<Long> members = reader.recruitParticipants(recruit.id());
+                notify(members, "모집 D-" + days, recruit.title(), NotificationTarget.recruit(recruit.id()));
+                notified += members.size();
+                recruits++;
+            }
+        }
+        return "due=%d recruits=%d notified=%d".formatted(due.size(), recruits, notified);
+    }
+
+    // 푸시는 커밋 후에 나가므로 대상마다 트랜잭션으로 묶는다
+    private void notify(List<Long> members, String title, String body, NotificationTarget target) {
+        transaction.executeWithoutResult(status -> notifications.toMembers(members, NotificationType.DEADLINE, title,
+                body, target, true));
+    }
+
+    private static LocalDateTime utcStart(LocalDate kstDate) {
+        return LocalDateTime.ofInstant(kstDate.atStartOfDay(KST).toInstant(), ZoneOffset.UTC);
     }
 
     private String lines(List<ScheduleReader.Due> due, LocalDate today) {
