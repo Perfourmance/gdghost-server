@@ -21,7 +21,7 @@ import com.gdghost.TestcontainersConfiguration;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Import({TestcontainersConfiguration.class, Fixtures.class, FakeMailGateway.class, FakeDiscordGateway.class,
-        FakePushGateway.class, FakeEmbeddingClient.class})
+        FakePushGateway.class, FakeEmbeddingClient.class, FakeObjectStorage.class})
 @ExtendWith(DatabaseCleaner.class)
 public @interface IntegrationTest {
 }

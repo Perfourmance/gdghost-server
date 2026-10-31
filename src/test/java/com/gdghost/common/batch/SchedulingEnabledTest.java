@@ -34,9 +34,20 @@ class SchedulingEnabledTest {
                 .map(scheduled -> scheduled.getTask())
                 .filteredOn(CronTask.class::isInstance)
                 .map(CronTask.class::cast)
-                .filteredOn(task -> task.toString().contains("CleanupJob.run"))
+                .filteredOn(task -> task.toString().contains("batch.CleanupJob.run"))
                 .singleElement()
                 .satisfies(task -> assertThat(task.getExpression()).isEqualTo("0 0 3 * * *"));
+    }
+
+    @Test
+    void 사진_정리_배치가_매일_0330_KST로_등록된다() {
+        assertThat(tasks.getScheduledTasks())
+                .map(scheduled -> scheduled.getTask())
+                .filteredOn(CronTask.class::isInstance)
+                .map(CronTask.class::cast)
+                .filteredOn(task -> task.toString().contains("UploadCleanupJob.run"))
+                .singleElement()
+                .satisfies(task -> assertThat(task.getExpression()).isEqualTo("0 30 3 * * *"));
     }
 
     @Test

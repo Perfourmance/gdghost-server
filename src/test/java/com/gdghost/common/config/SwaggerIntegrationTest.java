@@ -63,6 +63,7 @@ class SwaggerIntegrationTest {
             "VAPID_PUBLIC_KEY=BP4z9KsN6nGRTbVYI_c7VJSPQTBtkgcy27mlmlMoZIIgDll6e3vCYLocInmYWAmS6TlzAC8wEqKK6PBru3jl7A8",
             "VAPID_PRIVATE_KEY=yfWPiYE-n46HLnH0KqZOF1fJJU3MYrct3AELtAQ-oRw",
             "CLOUDFLARE_ACCOUNT_ID=unused", "WORKERS_AI_API_TOKEN=unused",
+            "R2_ACCOUNT_ID=unused", "R2_ACCESS_KEY_ID=unused", "R2_SECRET_ACCESS_KEY=unused", "R2_BUCKET=unused",
     })
     @ActiveProfiles("prod")
     class 운영_환경 {

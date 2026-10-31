@@ -34,15 +34,20 @@ public class RateLimiter {
      * @return 허용이면 0, 넘었으면 다시 시도할 수 있을 때까지의 초(Retry-After)
      */
     public long tryAcquire(String key, int limit, Duration window) {
+        return tryAcquire(key, limit, window, 1);
+    }
+
+    /** permits개를 한 번에 센다. 다 들어가지 않으면 하나도 세지 않는다 */
+    public long tryAcquire(String key, int limit, Duration window, int permits) {
         Instant now = clock.instant();
         AtomicLong retryAfter = new AtomicLong();
         windows.asMap().compute(key, (k, current) -> {
             Window active = current == null || !now.isBefore(current.end()) ? new Window(now.plus(window), 0) : current;
-            if (active.count() >= limit) {
+            if (active.count() + permits > limit) {
                 retryAfter.set(ceilSeconds(Duration.between(now, active.end())));
                 return active;
             }
-            return new Window(active.end(), active.count() + 1);
+            return new Window(active.end(), active.count() + permits);
         });
         return retryAfter.get();
     }

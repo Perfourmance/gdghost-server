@@ -29,6 +29,13 @@ embedding:                      # 운영은 필수 — 없으면 기동 실패
   account-id: ${CLOUDFLARE_ACCOUNT_ID}
   api-token: ${WORKERS_AI_API_TOKEN}
 
+r2:                             # 운영은 필수 — 없으면 기동 실패
+  required: true
+  account-id: ${R2_ACCOUNT_ID}
+  access-key-id: ${R2_ACCESS_KEY_ID}
+  secret-access-key: ${R2_SECRET_ACCESS_KEY}
+  bucket: ${R2_BUCKET}
+
 springdoc:                      # 운영에서는 API 문서를 열지 않는다
   api-docs:
     enabled: false
