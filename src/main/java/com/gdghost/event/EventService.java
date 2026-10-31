@@ -117,7 +117,7 @@ public class EventService {
         return ranks;
     }
 
-    private List<String> guideSteps(String raw) {
+    List<String> guideSteps(String raw) {
         return raw == null ? List.of() : json.readValue(raw, STRINGS);
     }
 
