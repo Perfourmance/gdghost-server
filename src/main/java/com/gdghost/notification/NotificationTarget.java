@@ -19,6 +19,10 @@ public record NotificationTarget(String type, long id, String subType, Long subI
         return new NotificationTarget("NOTICE", noticeId, null, null);
     }
 
+    public static NotificationTarget schedule(long scheduleId) {
+        return new NotificationTarget("SCHEDULE", scheduleId, null, null);
+    }
+
     /** 설정 화면은 id가 없지만 target_id가 필수라 받는 사람 id를 넣는다 */
     public static NotificationTarget settings(long memberId) {
         return new NotificationTarget("SETTINGS", memberId, null, null);

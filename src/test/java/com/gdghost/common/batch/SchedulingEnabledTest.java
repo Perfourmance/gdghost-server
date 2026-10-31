@@ -51,6 +51,17 @@ class SchedulingEnabledTest {
     }
 
     @Test
+    void 마감_임박_배치가_매일_09시_KST로_등록된다() {
+        assertThat(tasks.getScheduledTasks())
+                .map(scheduled -> scheduled.getTask())
+                .filteredOn(CronTask.class::isInstance)
+                .map(CronTask.class::cast)
+                .filteredOn(task -> task.toString().contains("DeadlineJob.run"))
+                .singleElement()
+                .satisfies(task -> assertThat(task.getExpression()).isEqualTo("0 0 9 * * *"));
+    }
+
+    @Test
     void 재알림_푸시가_매일_08시_KST로_등록된다() {
         assertThat(tasks.getScheduledTasks())
                 .map(scheduled -> scheduled.getTask())
