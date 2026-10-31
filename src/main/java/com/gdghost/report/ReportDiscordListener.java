@@ -7,6 +7,7 @@ import com.gdghost.common.discord.DiscordChannel;
 import com.gdghost.common.discord.DiscordMessage;
 import com.gdghost.common.discord.DiscordNotifier;
 import com.gdghost.common.event.DomainEventListener;
+import com.gdghost.feed.FeedCommentModeration;
 import com.gdghost.notice.NoticeCommentModeration;
 import com.gdghost.question.AnswerRepository;
 import com.gdghost.share.ShareNoteModeration;
@@ -19,13 +20,15 @@ public class ReportDiscordListener {
     private final AnswerRepository answers;
     private final NoticeCommentModeration noticeComments;
     private final ShareNoteModeration shareNotes;
+    private final FeedCommentModeration feedComments;
     private final DiscordNotifier discord;
     private final String webUrl;
 
     public ReportDiscordListener(ReportRepository reports, AnswerRepository answers,
-            NoticeCommentModeration noticeComments, ShareNoteModeration shareNotes, DiscordNotifier discord,
+            NoticeCommentModeration noticeComments, ShareNoteModeration shareNotes, FeedCommentModeration feedComments, DiscordNotifier discord,
             @Value("${web.url}") String webUrl) {
         this.shareNotes = shareNotes;
+        this.feedComments = feedComments;
         this.reports = reports;
         this.answers = answers;
         this.noticeComments = noticeComments;
@@ -55,7 +58,9 @@ public class ReportDiscordListener {
                     .map(shareId -> webUrl + "/shares/" + shareId + "#note-" + id)
                     .orElse(null);
             case FEED -> webUrl + "/feed/" + id;
-            default -> null;
+            case FEED_COMMENT -> feedComments.postId(id)
+                    .map(postId -> webUrl + "/feed/" + postId + "#comment-" + id)
+                    .orElse(null);
         };
     }
 

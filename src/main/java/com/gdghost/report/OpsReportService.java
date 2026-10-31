@@ -16,6 +16,7 @@ import com.gdghost.common.audit.OpsTargetType;
 import com.gdghost.common.error.BusinessException;
 import com.gdghost.common.error.ErrorCode;
 import com.gdghost.common.page.OpsPage;
+import com.gdghost.feed.FeedCommentModeration;
 import com.gdghost.feed.FeedModeration;
 import com.gdghost.notice.NoticeCommentModeration;
 import com.gdghost.question.ContentModeration;
@@ -38,12 +39,14 @@ public class OpsReportService {
     private final ShareModeration shares;
     private final ShareNoteModeration shareNotes;
     private final FeedModeration feeds;
+    private final FeedCommentModeration feedComments;
     private final OpsAuditLogger opsAudit;
     private final Clock clock;
 
     public OpsReportService(ReportRepository reports, OpsReportReader reader, ContentModeration moderation,
             NoticeCommentModeration noticeComments, ShareModeration shares, ShareNoteModeration shareNotes,
-            FeedModeration feeds, OpsAuditLogger opsAudit, Clock clock) {
+            FeedModeration feeds, FeedCommentModeration feedComments, OpsAuditLogger opsAudit, Clock clock) {
+        this.feedComments = feedComments;
         this.feeds = feeds;
         this.shareNotes = shareNotes;
         this.shares = shares;
@@ -117,7 +120,8 @@ public class OpsReportService {
             case SHARE -> shares.lock(target.id()).map(s -> new Content(s.authorId(), false, s.deletedBy()));
             case SHARE_NOTE -> shareNotes.lock(target.id()).map(n -> new Content(n.authorId(), false, n.deletedBy()));
             case FEED -> feeds.lock(target.id()).map(p -> new Content(p.authorId(), false, p.deletedBy()));
-            default -> Optional.empty();
+            case FEED_COMMENT -> feedComments.lock(target.id())
+                    .map(c -> new Content(c.authorId(), false, c.deletedBy()));
         };
     }
 
@@ -129,7 +133,7 @@ public class OpsReportService {
             case SHARE -> shares.hide(target.id(), now);
             case SHARE_NOTE -> shareNotes.hide(target.id(), now);
             case FEED -> feeds.hide(target.id(), now);
-            default -> throw new IllegalStateException(target.type().name());
+            case FEED_COMMENT -> feedComments.hide(target.id(), now);
         }
     }
 
@@ -141,7 +145,7 @@ public class OpsReportService {
             case SHARE -> shares.restore(target.id());
             case SHARE_NOTE -> shareNotes.restore(target.id());
             case FEED -> feeds.restore(target.id());
-            default -> throw new IllegalStateException(target.type().name());
+            case FEED_COMMENT -> feedComments.restore(target.id());
         }
     }
 

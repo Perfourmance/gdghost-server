@@ -134,13 +134,9 @@ class ReportCreateIntegrationTest {
     }
 
     @Test
-    void 대상_종류가_없거나_아직_없는_기능이거나_모르는_값이면_400() throws Exception {
+    void 대상_종류가_없거나_모르는_값이면_400() throws Exception {
         report(login, "{\"targetId\":" + question + ",\"reason\":\"사유\"}")
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors[0].field").value("targetType"));
-        report(login, body("FEED_COMMENT", question, "사유"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
                 .andExpect(jsonPath("$.errors[0].field").value("targetType"));
         report(login, body("MEMBER", question, "사유")).andExpect(status().isBadRequest());
         report(login, "{\"targetType\":\"QUESTION\",\"reason\":\"사유\"}").andExpect(status().isBadRequest());
