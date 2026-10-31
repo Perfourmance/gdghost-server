@@ -46,6 +46,7 @@ public class ReportDiscordListener {
             case NOTICE_COMMENT -> noticeComments.noticeId(id)
                     .map(noticeId -> webUrl + "/notices/" + noticeId + "#comment-" + id)
                     .orElse(null);
+            case SHARE -> webUrl + "/shares/" + id;
             default -> null;
         };
     }

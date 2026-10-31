@@ -14,6 +14,7 @@ import com.gdghost.common.error.ErrorField;
 import com.gdghost.notice.NoticeCommentModeration;
 import com.gdghost.question.AnswerRepository;
 import com.gdghost.question.QuestionRepository;
+import com.gdghost.share.ShareModeration;
 
 /** 신고 접수. 작성자 · 신고자에게 알리지 않는다 */
 @Service
@@ -23,15 +24,18 @@ public class ReportService {
     private final QuestionRepository questions;
     private final AnswerRepository answers;
     private final NoticeCommentModeration noticeComments;
+    private final ShareModeration shares;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public ReportService(ReportRepository reports, QuestionRepository questions, AnswerRepository answers,
-            NoticeCommentModeration noticeComments, ApplicationEventPublisher events, Clock clock) {
+            NoticeCommentModeration noticeComments, ShareModeration shares, ApplicationEventPublisher events,
+            Clock clock) {
         this.reports = reports;
         this.questions = questions;
         this.answers = answers;
         this.noticeComments = noticeComments;
+        this.shares = shares;
         this.events = events;
         this.clock = clock;
     }
@@ -69,6 +73,7 @@ public class ReportService {
                     .filter(q -> !q.isDeleted())
                     .isPresent();
             case NOTICE_COMMENT -> noticeComments.isLive(targetId);
+            case SHARE -> shares.isLive(targetId);
             default -> false;
         };
     }

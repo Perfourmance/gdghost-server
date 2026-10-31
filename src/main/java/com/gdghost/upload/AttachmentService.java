@@ -59,6 +59,16 @@ public class AttachmentService {
         attach(purpose, ownerId, memberId, objectKeys);
     }
 
+    /** 글을 지울 때 연결을 끊는다. 정리 배치가 R2에서 지운다 */
+    public void detach(UploadPurpose purpose, long ownerId) {
+        store.delete(purpose, ownerId);
+    }
+
+    /** 지금 붙어 있는 키, 순서대로 */
+    public List<String> objectKeys(UploadPurpose purpose, long ownerId) {
+        return store.find(purpose, List.of(ownerId)).stream().map(AttachmentStore.Row::objectKey).toList();
+    }
+
     /** 글 id별 사진. 권한 확인은 부르는 쪽이 한다 — 여기서 나간 주소는 만료까지 누구나 열 수 있다 */
     public Map<Long, List<Attachment>> photos(UploadPurpose purpose, Collection<Long> ownerIds) {
         if (ownerIds.isEmpty()) {
