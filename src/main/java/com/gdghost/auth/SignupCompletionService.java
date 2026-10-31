@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,7 @@ import com.gdghost.invite.InviteCodeRepository;
 import com.gdghost.invite.InviteCodeState;
 import com.gdghost.member.Member;
 import com.gdghost.member.MemberProfile;
+import com.gdghost.member.MemberProfileChangedEvent;
 import com.gdghost.member.MemberRepository;
 import com.gdghost.member.MemberTagWriter;
 import com.gdghost.member.Nicknames;
@@ -36,11 +38,13 @@ public class SignupCompletionService {
     private final PasswordEncoder passwordEncoder;
     private final LoginTokenService loginTokens;
     private final MeReader meReader;
+    private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public SignupCompletionService(SignupSessionStore sessions, InviteCodeRepository inviteCodes,
             MemberRepository members, MemberTagWriter memberTags, TagService tagService,
-            PasswordEncoder passwordEncoder, LoginTokenService loginTokens, MeReader meReader, Clock clock) {
+            PasswordEncoder passwordEncoder, LoginTokenService loginTokens, MeReader meReader,
+            ApplicationEventPublisher events, Clock clock) {
         this.sessions = sessions;
         this.inviteCodes = inviteCodes;
         this.members = members;
@@ -49,6 +53,7 @@ public class SignupCompletionService {
         this.passwordEncoder = passwordEncoder;
         this.loginTokens = loginTokens;
         this.meReader = meReader;
+        this.events = events;
         this.clock = clock;
     }
 
@@ -96,7 +101,7 @@ public class SignupCompletionService {
             loginTokens.revoke(previousToken);
         }
         String loginToken = loginTokens.issue(member.getId(), true, userAgent);
-        // TODO 커밋 후 부원 임베딩 생성 요청(7단계)
+        events.publishEvent(new MemberProfileChangedEvent(member.getId()));
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {

@@ -200,6 +200,17 @@ class ProfileUpdateIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT bio FROM member WHERE id = ?", String.class, member.id())).isNull();
     }
 
+    @Test
+    void 하루_20회를_넘으면_429() throws Exception {
+        for (int i = 0; i < 20; i++) {
+            patchProfile("{\"bio\":\"소개 " + i + "\"}").andExpect(status().isOk());
+        }
+
+        patchProfile("{\"bio\":\"소개 20\"}")
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.code").value("RATE_LIMITED"));
+    }
+
     private ResultActions patchProfile(String json) throws Exception {
         return mvc.perform(patch("/api/v1/me/profile").cookie(login).with(csrfToken())
                 .contentType(MediaType.APPLICATION_JSON)

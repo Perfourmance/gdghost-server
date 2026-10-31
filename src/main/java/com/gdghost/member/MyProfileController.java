@@ -1,5 +1,7 @@
 package com.gdghost.member;
 
+import java.time.temporal.ChronoUnit;
+
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -10,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.gdghost.common.ratelimit.RateLimit;
 import com.gdghost.common.security.AuthMember;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -37,7 +40,8 @@ public class MyProfileController {
 
     @Operation(summary = "프로필 수정", description = "보낸 필드만 바꾼다. 태그는 보낸 종류만 통째로 교체 — "
             + "관심 분야에서 빠진 분야의 세부 기술은 같이 지운다. statusNote · bio는 빈 문자열이면 지운다. "
-            + "닉네임은 30일에 한 번. 이름 · 기수 · 학번은 보내면 400.")
+            + "닉네임은 30일에 한 번. 이름 · 기수 · 학번은 보내면 400. 부원당 하루 20회(첫 수정부터 24시간).")
+    @RateLimit(limit = 20, unit = ChronoUnit.DAYS)
     @PatchMapping("/profile")
     public MyProfileResponse updateProfile(@AuthenticationPrincipal AuthMember me,
             @RequestBody @Valid ProfileUpdateRequest request) {

@@ -39,7 +39,7 @@ public class QuestionService {
         this.clock = clock;
     }
 
-    // TODO 임베딩 · 선배 지목(7)
+    // TODO 선배 지목(7)
     @Transactional
     public QuestionCreatedResponse create(long authorId, QuestionCreateRequest request) {
         Question question = questions.save(Question.write(authorId, request.category(), request.title(),
@@ -98,13 +98,17 @@ public class QuestionService {
         return detail(question, viewerId);
     }
 
-    /** 답변(지우지 않은 답변 · 답글)이 있을 때 고치면 수정됨 표시. TODO 임베딩 재계산 · 라우팅 후보 재계산(7) */
+    /** 답변(지우지 않은 답변 · 답글)이 있을 때 고치면 수정됨 표시. TODO 라우팅 후보 재계산(7) */
     @Transactional
     public QuestionDetail update(long memberId, long questionId, QuestionUpdateRequest request) {
         Question question = mine(memberId, questionId);
-        question.edit(request.category(), request.title(), request.body(), detailReader.hasLiveAnswer(questionId),
-                clock.instant());
+        boolean changed = question.edit(request.category(), request.title(), request.body(),
+                detailReader.hasLiveAnswer(questionId), clock.instant());
         questions.flush();
+        if (changed) {
+            questions.deleteEmbedding(questionId);
+            events.publishEvent(new QuestionEditedEvent(questionId));
+        }
         return detail(find(questionId), memberId);
     }
 

@@ -130,6 +130,17 @@ class QuestionUpdateIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    @Test
+    void 하루_20회를_넘으면_429() throws Exception {
+        for (int i = 0; i < 20; i++) {
+            patchQuestion(question, login, "{\"title\":\"제목 " + i + "\"}").andExpect(status().isOk());
+        }
+
+        patchQuestion(question, login, "{\"title\":\"제목 20\"}")
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.code").value("RATE_LIMITED"));
+    }
+
     private ResultActions patchQuestion(long id, Cookie cookie, String json) throws Exception {
         return mvc.perform(patch("/api/v1/questions/{id}", id).cookie(cookie).with(csrfToken())
                 .contentType(MediaType.APPLICATION_JSON)
