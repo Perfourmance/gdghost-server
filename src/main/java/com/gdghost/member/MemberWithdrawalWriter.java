@@ -31,9 +31,10 @@ public class MemberWithdrawalWriter {
         jdbc.update("DELETE FROM notification WHERE member_id = ?", memberId);
         jdbc.update("UPDATE email_verification SET email = NULL WHERE member_id = ? OR email = ?", memberId, email);
         jdbc.update("UPDATE email_change_log SET old_email = NULL, new_email = NULL WHERE member_id = ?", memberId);
+        // 운영진이 숨긴 글도 본인 삭제로 바꾼다. 그대로 두면 숨김을 되돌릴 때 다시 공개된다
         jdbc.update("""
-                UPDATE feed_post SET deleted_at = ?, deleted_by = 'AUTHOR'
-                WHERE author_id = ? AND deleted_at IS NULL
+                UPDATE feed_post SET deleted_at = COALESCE(deleted_at, ?), deleted_by = 'AUTHOR'
+                WHERE author_id = ? AND (deleted_at IS NULL OR deleted_by = 'STAFF')
                 """, now, memberId);
         jdbc.update("""
                 UPDATE coffee_chat SET state = 'EXPIRED', responded_at = ?
