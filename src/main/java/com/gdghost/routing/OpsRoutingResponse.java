@@ -33,6 +33,9 @@ public final class OpsRoutingResponse {
             double conversionRate, double passRate, double fallbackRate, List<VersionStats> byVersion) {
     }
 
+    public record ThisWeek(long questionCount, long unansweredCount, double routingConversionRate) {
+    }
+
     public record VersionStats(String version, long sentCount, double conversionRate, double passRate) {
     }
 

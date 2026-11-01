@@ -1,6 +1,8 @@
 package com.gdghost.notice;
 
+import java.time.LocalDate;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -37,6 +39,31 @@ public class NoticeStatsReader {
                             rs.getLong("confirmed_count")));
                 });
         return stats;
+    }
+
+    public record UnconfirmedMustRead(long noticeId, String title, long confirmedCount, long memberCount) {
+    }
+
+    /** 마감일이 없거나 오늘(한국 날짜) 이후인 필독 공지 가운데 아직 다 확인하지 않은 것, 최신순 */
+    public List<UnconfirmedMustRead> unconfirmedMustRead(LocalDate today, int limit) {
+        Map<Long, String> titles = new LinkedHashMap<>();
+        jdbc.query("""
+                SELECT id, title FROM notice
+                WHERE deleted_at IS NULL AND is_must_read AND (due_date IS NULL OR due_date >= :today)
+                ORDER BY id DESC
+                """, Map.of("today", today), rs -> {
+                    titles.put(rs.getLong("id"), rs.getString("title"));
+                });
+        Map<Long, NoticeStats> stats = stats(List.copyOf(titles.keySet()));
+        return titles.entrySet().stream()
+                .filter(notice -> {
+                    NoticeStats stat = stats.get(notice.getKey());
+                    return stat.confirmedCount() < stat.memberCount();
+                })
+                .limit(limit)
+                .map(notice -> new UnconfirmedMustRead(notice.getKey(), notice.getValue(),
+                        stats.get(notice.getKey()).confirmedCount(), stats.get(notice.getKey()).memberCount()))
+                .toList();
     }
 
     NoticeStats stats(long noticeId) {

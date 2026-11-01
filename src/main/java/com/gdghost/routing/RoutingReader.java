@@ -270,7 +270,7 @@ public class RoutingReader {
     }
 
     /** 처리를 기다리는 인증. 탈퇴한 부원의 글은 뺀다 */
-    long pendingCertifications() {
+    public long pendingCertifications() {
         Long count = jdbc.queryForObject("""
                 SELECT COUNT(*) FROM certification c
                 JOIN member m ON m.id = c.member_id
