@@ -6,7 +6,7 @@ import java.util.function.Function;
 import org.springframework.data.domain.Page;
 
 /**
- * 운영 · 어드민 목록 응답. page는 0부터.
+ * 운영 목록 응답. page는 0부터.
  */
 public record OpsPage<T>(List<T> items, int page, int size, long total) {
 

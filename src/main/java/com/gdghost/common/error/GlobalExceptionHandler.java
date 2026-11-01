@@ -54,7 +54,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(Exception.class)
     ResponseEntity<ProblemDetail> handleUnexpected(Exception e, HttpServletRequest request) {
         log.error("처리하지 못한 예외", e);
-        errorLog.record(e, request.getRequestURI());
+        errorLog.record(e, pathOf(request));
         return respond(ErrorCode.INTERNAL_ERROR.toProblem("잠시 후 다시 시도해 주세요.", List.of()));
     }
 
@@ -88,11 +88,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         if (status.is5xxServerError()) {
             log.error("처리하지 못한 예외", e);
             errorLog.record(e, request instanceof ServletWebRequest servlet
-                    ? servlet.getRequest().getRequestURI() : request.getDescription(false));
+                    ? pathOf(servlet.getRequest()) : request.getDescription(false));
         }
         ProblemDetail problem = body instanceof ProblemDetail p ? p : ProblemDetail.forStatus(status);
         ErrorCode.fromStatus(status).applyTo(problem);
         return super.handleExceptionInternal(e, problem, headers, status, request);
+    }
+
+    private static String pathOf(HttpServletRequest request) {
+        return request.getMethod() + " " + request.getRequestURI();
     }
 
     private ResponseEntity<Object> validationFailed(List<ErrorField> errors, HttpHeaders headers) {

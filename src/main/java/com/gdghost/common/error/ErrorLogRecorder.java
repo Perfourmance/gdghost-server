@@ -6,6 +6,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +36,9 @@ public class ErrorLogRecorder {
     private static final int MAX_STACK = 60_000;
     private static final int MAX_PATH = 500;
     private static final Duration ALERT_INTERVAL = Duration.ofHours(1);
+    private static final Pattern EMAIL = Pattern.compile("[\\w.+-]+@[\\w-]+(\\.[\\w-]+)+");
+    private static final Pattern CREDENTIAL = Pattern.compile(
+            "(?i)(password|passwd|pwd|token|secret|authorization|cookie|api[_-]?key)(\\s*[=:]\\s*)[^\\s,;&)\\]}]+");
 
     private final JdbcTemplate jdbc;
     private final TransactionTemplate newTransaction;
@@ -74,7 +78,7 @@ public class ErrorLogRecorder {
                         VALUES (?, ?, ?, ?, 1, ?, ?) AS new
                         ON DUPLICATE KEY UPDATE count = error_log.count + 1, message = new.message,
                                                 path = new.path, last_at = new.last_at
-                        """, fingerprint, truncate(e.toString(), MAX_MESSAGE), truncate(stackOf(e), MAX_STACK),
+                        """, fingerprint, truncate(mask(e.toString()), MAX_MESSAGE), truncate(mask(stackOf(e)), MAX_STACK),
                         trimmedPath, now, now);
                 if (!alert) {
                     return null;
@@ -124,6 +128,12 @@ public class ErrorLogRecorder {
         StringWriter writer = new StringWriter();
         e.printStackTrace(new PrintWriter(writer));
         return writer.toString();
+    }
+
+    /** 예외 메시지에 섞인 이메일 · 비밀번호 · 토큰을 저장 전에 가린다 */
+    static String mask(String text) {
+        String masked = EMAIL.matcher(text).replaceAll("[email]");
+        return CREDENTIAL.matcher(masked).replaceAll("$1$2[hidden]");
     }
 
     private static String truncate(String value, int max) {
