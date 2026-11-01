@@ -55,7 +55,7 @@ class FilterErrorIntegrationTest {
         assertThat(response.headers().firstValue("Content-Type")).hasValueSatisfying(
                 type -> assertThat(type).startsWith("application/problem+json"));
         assertThat(response.body()).contains("\"code\":\"INTERNAL_ERROR\"").doesNotContain("DB 연결 끊김");
-        assertThat(jdbc.queryForList("SELECT path FROM error_log", String.class)).containsExactly("/api/v1/auth/me");
+        assertThat(jdbc.queryForList("SELECT path FROM error_log", String.class)).containsExactly("GET /api/v1/auth/me");
     }
 
 }

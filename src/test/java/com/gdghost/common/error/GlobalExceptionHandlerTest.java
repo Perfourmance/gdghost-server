@@ -106,7 +106,7 @@ class GlobalExceptionHandlerTest {
     void 예상_못_한_예외는_error_log에_남긴다() throws Exception {
         mvc.perform(get("/test/boom"));
 
-        verify(errorLog).record(any(IllegalStateException.class), eq("/test/boom"));
+        verify(errorLog).record(any(IllegalStateException.class), eq("GET /test/boom"));
     }
 
     @Test
@@ -115,7 +115,7 @@ class GlobalExceptionHandlerTest {
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.code").value("INTERNAL_ERROR"));
 
-        verify(errorLog).record(any(HttpMessageNotWritableException.class), eq("/test/not-writable"));
+        verify(errorLog).record(any(HttpMessageNotWritableException.class), eq("GET /test/not-writable"));
     }
 
     @Test
