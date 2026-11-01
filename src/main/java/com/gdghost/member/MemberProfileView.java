@@ -16,7 +16,7 @@ public record MemberProfileView(long id, String nickname, String name, int gener
     public record Contact(ContactType type, String value) {
     }
 
-    /** 10단계부터 채운다 */
+    /** 내가 보낸 마지막 신청의 상태. availableAt은 거절 · 만료 후 14일 안일 때 다시 신청할 수 있는 시각 */
     public record CoffeeChat(String myRequestState, Instant availableAt) {
 
         static final CoffeeChat NONE = new CoffeeChat(null, null);

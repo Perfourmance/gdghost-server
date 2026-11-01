@@ -1,5 +1,6 @@
 package com.gdghost.member;
 
+import java.time.Clock;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -20,13 +21,18 @@ public class MemberService {
     private final MemberDirectoryReader directoryReader;
     private final MemberProfileReader profileReader;
     private final MemberActivityReader activityReader;
+    private final CoffeeRequestReader coffeeRequests;
+    private final Clock clock;
 
     public MemberService(MemberRepository members, MemberDirectoryReader directoryReader,
-            MemberProfileReader profileReader, MemberActivityReader activityReader) {
+            MemberProfileReader profileReader, MemberActivityReader activityReader,
+            CoffeeRequestReader coffeeRequests, Clock clock) {
         this.members = members;
         this.directoryReader = directoryReader;
         this.profileReader = profileReader;
         this.activityReader = activityReader;
+        this.coffeeRequests = coffeeRequests;
+        this.clock = clock;
     }
 
     @Transactional(readOnly = true)
@@ -59,7 +65,6 @@ public class MemberService {
         return directoryReader.searchCount(phrase, FullText.like(phrase));
     }
 
-    // TODO coffeeChat 채우기(10단계)
     @Transactional(readOnly = true)
     public MemberProfileView profile(long viewerId, long memberId) {
         Member member = findVisible(memberId);
@@ -78,8 +83,14 @@ public class MemberService {
                         .toList(),
                 tags.experiences().stream().map(TagItem::name).toList(),
                 member.getStatusNote(), member.getStatusNoteUpdatedAt(), member.getBio(), contacts,
-                member.isAcceptQuestion(), member.isAcceptCoffee(), MemberProfileView.CoffeeChat.NONE,
+                member.isAcceptQuestion(), member.isAcceptCoffee(), self ? MemberProfileView.CoffeeChat.NONE : coffeeChat(viewerId, memberId),
                 activityReader.stats(memberId));
+    }
+
+    private MemberProfileView.CoffeeChat coffeeChat(long viewerId, long memberId) {
+        return coffeeRequests.latest(viewerId, memberId)
+                .map(latest -> new MemberProfileView.CoffeeChat(latest.state(), latest.cooldownUntil(clock.instant())))
+                .orElse(MemberProfileView.CoffeeChat.NONE);
     }
 
     @Transactional(readOnly = true)
