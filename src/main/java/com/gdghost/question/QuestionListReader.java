@@ -1,5 +1,7 @@
 package com.gdghost.question;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -55,10 +57,37 @@ public class QuestionListReader {
                   AND (:afterId IS NULL OR q.id < :afterId)
                 ORDER BY q.id DESC
                 LIMIT :limit
-                """, params, (rs, i) -> new Row(rs.getLong("id"), QuestionCategory.valueOf(rs.getString("category")),
+                """, params, QuestionListReader::row);
+    }
+
+    /** 제목 · 본문만 찾는다. 익명 질문이 작성자로 찾히지 않게 작성자 조건은 걸지 않는다 */
+    List<Row> search(String phrase, Long afterId, int limit) {
+        return jdbc.query("""
+                SELECT q.id, q.category, q.title, q.is_anonymous, q.author_id, q.state, q.view_count, q.created_at,
+                """ + AuthorRows.COLUMNS + """
+                FROM question q JOIN member m ON m.id = q.author_id
+                WHERE q.deleted_at IS NULL AND MATCH (q.title, q.body) AGAINST (:phrase IN BOOLEAN MODE)
+                  AND (:afterId IS NULL OR q.id < :afterId)
+                ORDER BY q.id DESC
+                LIMIT :limit
+                """, new MapSqlParameterSource()
+                .addValue("phrase", phrase)
+                .addValue("afterId", afterId)
+                .addValue("limit", limit), QuestionListReader::row);
+    }
+
+    long searchCount(String phrase) {
+        return jdbc.queryForObject("""
+                SELECT COUNT(*) FROM question q
+                WHERE q.deleted_at IS NULL AND MATCH (q.title, q.body) AGAINST (:phrase IN BOOLEAN MODE)
+                """, Map.of("phrase", phrase), Long.class);
+    }
+
+    private static Row row(ResultSet rs, int i) throws SQLException {
+        return new Row(rs.getLong("id"), QuestionCategory.valueOf(rs.getString("category")),
                 rs.getString("title"), rs.getBoolean("is_anonymous"), AuthorRows.read(rs, "author_id"),
                 QuestionState.valueOf(rs.getString("state")), rs.getInt("view_count"),
-                rs.getObject("created_at", LocalDateTime.class).toInstant(ZoneOffset.UTC)));
+                rs.getObject("created_at", LocalDateTime.class).toInstant(ZoneOffset.UTC));
     }
 
     /** 답글 · 삭제 답변은 세지 않는다 (프로필 답변 수와 같은 규칙) */

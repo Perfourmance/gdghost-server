@@ -28,6 +28,12 @@ class ShareReader {
             s.author_id, m.nickname, m.generation, m.role, m.withdrawn_at IS NOT NULL AS withdrawn
             """;
 
+    private static final String SEARCH = """
+             s.deleted_at IS NULL
+              AND (MATCH (s.title, s.body) AGAINST (:phrase IN BOOLEAN MODE) OR EXISTS (
+                    SELECT 1 FROM share_tag t WHERE t.share_id = s.id AND t.name LIKE :tagLike ESCAPE '!'))
+            """;
+
     private final NamedParameterJdbcTemplate jdbc;
 
     ShareReader(NamedParameterJdbcTemplate jdbc) {
@@ -76,6 +82,28 @@ class ShareReader {
                         .addValue("afterId", after == null ? null : after.id())
                         .addValue("limit", limit),
                 (rs, i) -> row(rs));
+    }
+
+    /** 제목 · 본문 · 태그. 최신순 */
+    List<Row> search(String phrase, String tagLike, Long afterId, int limit) {
+        return jdbc.query("""
+                SELECT s.id, s.category, s.title, s.save_count, s.created_at,
+                """ + AUTHOR_COLUMNS + """
+                FROM share s JOIN member m ON m.id = s.author_id
+                WHERE""" + SEARCH + """
+                  AND (:afterId IS NULL OR s.id < :afterId)
+                ORDER BY s.id DESC
+                LIMIT :limit
+                """, new MapSqlParameterSource()
+                .addValue("phrase", phrase)
+                .addValue("tagLike", tagLike)
+                .addValue("afterId", afterId)
+                .addValue("limit", limit), (rs, i) -> row(rs));
+    }
+
+    long searchCount(String phrase, String tagLike) {
+        return jdbc.queryForObject("SELECT COUNT(*) FROM share s WHERE" + SEARCH,
+                new MapSqlParameterSource().addValue("phrase", phrase).addValue("tagLike", tagLike), Long.class);
     }
 
     /** 최근 저장한 순. 지운 글은 빠진다 */

@@ -1,5 +1,7 @@
 package com.gdghost.member;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -17,6 +19,13 @@ import com.gdghost.common.security.Role;
  */
 @Repository
 public class MemberDirectoryReader {
+
+    private static final String SEARCH = """
+             m.withdrawn_at IS NULL AND m.suspended_at IS NULL AND m.hidden_from_list = FALSE
+              AND (MATCH (m.nickname, m.name, m.status_note) AGAINST (:phrase IN BOOLEAN MODE) OR EXISTS (
+                    SELECT 1 FROM member_tag mt JOIN tag t ON t.id = mt.tag_id
+                    WHERE mt.member_id = m.id AND t.name LIKE :tagLike ESCAPE '!'))
+            """;
 
     private final NamedParameterJdbcTemplate jdbc;
 
@@ -44,11 +53,40 @@ public class MemberDirectoryReader {
                        OR (generation = :afterGeneration AND nickname > :afterNickname))
                 ORDER BY generation DESC, nickname
                 LIMIT :limit
-                """, params, (rs, i) -> new MemberSummary(rs.getLong("id"), rs.getString("nickname"),
+                """, params, MemberDirectoryReader::row);
+        return withDetails(rows);
+    }
+
+    /** 닉네임 · 이름 · 근황 · 태그로 찾는다. 최신 가입순(id 내림차순) */
+    public List<MemberSummary> search(String phrase, String tagLike, Long beforeId, int limit) {
+        return withDetails(jdbc.query("""
+                SELECT id, nickname, generation, status, position, status_note, accept_question, accept_coffee, role
+                FROM member m
+                WHERE""" + SEARCH + """
+                  AND (:before IS NULL OR id < :before)
+                ORDER BY id DESC
+                LIMIT :limit
+                """, new MapSqlParameterSource()
+                .addValue("phrase", phrase)
+                .addValue("tagLike", tagLike)
+                .addValue("before", beforeId)
+                .addValue("limit", limit), MemberDirectoryReader::row));
+    }
+
+    public long searchCount(String phrase, String tagLike) {
+        return jdbc.queryForObject("SELECT COUNT(*) FROM member m WHERE" + SEARCH,
+                new MapSqlParameterSource().addValue("phrase", phrase).addValue("tagLike", tagLike), Long.class);
+    }
+
+    private static MemberSummary row(ResultSet rs, int i) throws SQLException {
+        return new MemberSummary(rs.getLong("id"), rs.getString("nickname"),
                 rs.getInt("generation"), MemberStatus.valueOf(rs.getString("status")),
                 Position.valueOf(rs.getString("position")), rs.getString("status_note"), List.of(), 0,
                 rs.getBoolean("accept_question"), rs.getBoolean("accept_coffee"),
-                Role.valueOf(rs.getString("role")) == Role.STAFF));
+                Role.valueOf(rs.getString("role")) == Role.STAFF);
+    }
+
+    private List<MemberSummary> withDetails(List<MemberSummary> rows) {
         if (rows.isEmpty()) {
             return rows;
         }
