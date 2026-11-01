@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.gdghost.common.error.BusinessException;
 import com.gdghost.common.error.ErrorCode;
 import com.gdghost.common.error.ErrorField;
+import com.gdghost.common.page.CursorPage;
 import com.gdghost.common.security.AuthMember;
 import com.gdghost.common.security.Role;
 
@@ -48,6 +49,31 @@ public class ScheduleService {
     @Transactional(readOnly = true)
     public List<?> upcoming(AuthMember viewer, int limit) {
         return items(viewer, reader.upcoming(today(), limit));
+    }
+
+    /** phrase는 FullText.phrase로 만든 검색어 */
+    @Transactional(readOnly = true)
+    public CursorPage<?> search(AuthMember viewer, String phrase, String cursor, int size) {
+        CursorPage<ScheduleReader.Row> page = CursorPage.of(reader.search(phrase, afterId(cursor), size + 1), size,
+                row -> String.valueOf(row.id()));
+        return new CursorPage<>(items(viewer, page.items()), page.nextCursor(), page.hasMore());
+    }
+
+    @Transactional(readOnly = true)
+    public long searchCount(String phrase) {
+        return reader.searchCount(phrase);
+    }
+
+    private static Long afterId(String cursor) {
+        String raw = CursorPage.decode(cursor);
+        if (raw == null) {
+            return null;
+        }
+        try {
+            return Long.parseLong(raw);
+        } catch (NumberFormatException e) {
+            throw CursorPage.invalidCursor();
+        }
     }
 
     @Transactional(readOnly = true)

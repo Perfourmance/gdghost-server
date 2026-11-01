@@ -70,6 +70,21 @@ public class QuestionService {
         }
         List<QuestionListReader.Row> rows = listReader.list(category, mine ? me.id() : null, unanswered,
                 afterId(cursor), size + 1);
+        return page(me, rows, size);
+    }
+
+    /** phrase는 FullText.phrase로 만든 검색어 */
+    @Transactional(readOnly = true)
+    public CursorPage<?> search(AuthMember me, String phrase, String cursor, int size) {
+        return page(me, listReader.search(phrase, afterId(cursor), size + 1), size);
+    }
+
+    @Transactional(readOnly = true)
+    public long searchCount(String phrase) {
+        return listReader.searchCount(phrase);
+    }
+
+    private CursorPage<?> page(AuthMember me, List<QuestionListReader.Row> rows, int size) {
         CursorPage<QuestionListReader.Row> page = CursorPage.of(rows, size, row -> String.valueOf(row.id()));
         if (page.items().isEmpty()) {
             return page;

@@ -59,6 +59,26 @@ class ScheduleReader {
                 """, Map.of("today", today, "limit", limit), ScheduleReader::row);
     }
 
+    /** 제목 · 메모 · 장소. 최신 등록순(id 내림차순) */
+    List<Row> search(String phrase, Long afterId, int limit) {
+        return jdbc.query(COLUMNS + """
+                WHERE s.deleted_at IS NULL AND MATCH (s.title, s.memo, s.place) AGAINST (:phrase IN BOOLEAN MODE)
+                  AND (:afterId IS NULL OR s.id < :afterId)
+                ORDER BY s.id DESC
+                LIMIT :limit
+                """, new MapSqlParameterSource()
+                .addValue("phrase", phrase)
+                .addValue("afterId", afterId)
+                .addValue("limit", limit), ScheduleReader::row);
+    }
+
+    long searchCount(String phrase) {
+        return jdbc.queryForObject("""
+                SELECT COUNT(*) FROM schedule s
+                WHERE s.deleted_at IS NULL AND MATCH (s.title, s.memo, s.place) AGAINST (:phrase IN BOOLEAN MODE)
+                """, Map.of("phrase", phrase), Long.class);
+    }
+
     ScheduleAuthor author(long authorId) {
         return jdbc.queryForObject("""
                 SELECT id, IF(withdrawn_at IS NULL, nickname, NULL) AS nickname FROM member WHERE id = :id

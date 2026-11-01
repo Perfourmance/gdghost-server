@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.gdghost.common.error.BusinessException;
 import com.gdghost.common.error.ErrorCode;
 import com.gdghost.common.page.CursorPage;
+import com.gdghost.common.search.FullText;
 import com.gdghost.common.security.Role;
 import com.gdghost.member.MyProfileResponse.TagItem;
 
@@ -44,6 +45,18 @@ public class MemberService {
         }
         return CursorPage.of(directoryReader.list(generation, status, afterGeneration, afterNickname, size + 1),
                 size, row -> row.generation() + ":" + row.nickname());
+    }
+
+    /** phrase는 FullText.phrase로 만든 검색어. 태그는 LIKE로 찾아 따옴표를 뗀 원문을 쓴다 */
+    @Transactional(readOnly = true)
+    public CursorPage<MemberSummary> search(String phrase, String cursor, int size) {
+        return CursorPage.of(directoryReader.search(phrase, FullText.like(phrase), afterId(cursor), size + 1), size,
+                row -> String.valueOf(row.id()));
+    }
+
+    @Transactional(readOnly = true)
+    public long searchCount(String phrase) {
+        return directoryReader.searchCount(phrase, FullText.like(phrase));
     }
 
     // TODO coffeeChat 채우기(10단계)

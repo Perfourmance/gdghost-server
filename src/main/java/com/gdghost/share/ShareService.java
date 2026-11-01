@@ -14,6 +14,7 @@ import com.gdghost.common.error.BusinessException;
 import com.gdghost.common.error.ErrorCode;
 import com.gdghost.common.error.ErrorField;
 import com.gdghost.common.page.CursorPage;
+import com.gdghost.common.search.FullText;
 import com.gdghost.common.security.AuthMember;
 import com.gdghost.question.AuthorRef;
 import com.gdghost.question.GuestAuthor;
@@ -61,6 +62,21 @@ public class ShareService {
                     .toList(), page.nextCursor(), page.hasMore());
         }
         return new CursorPage<>(summaries(page.items(), me.id()), page.nextCursor(), page.hasMore());
+    }
+
+    /** phrase는 FullText.phrase로 만든 검색어 */
+    @Transactional(readOnly = true)
+    public CursorPage<ShareSummary> search(long viewerId, String phrase, String cursor, int size) {
+        ShareReader.After after = after(cursor, ShareSort.LATEST);
+        List<ShareReader.Row> rows = reader.search(phrase, FullText.like(phrase), after == null ? null : after.id(),
+                size + 1);
+        CursorPage<ShareReader.Row> page = CursorPage.of(rows, size, row -> String.valueOf(row.id()));
+        return new CursorPage<>(summaries(page.items(), viewerId), page.nextCursor(), page.hasMore());
+    }
+
+    @Transactional(readOnly = true)
+    public long searchCount(String phrase) {
+        return reader.searchCount(phrase, FullText.like(phrase));
     }
 
     /** 최근 7일 저장이 많은 글. 비회원은 id · 분류 · 제목만 */
