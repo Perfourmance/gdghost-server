@@ -20,7 +20,7 @@ public record NotificationTarget(String type, long id, String subType, Long subI
     }
 
     public static NotificationTarget shareNote(long shareId, long noteId) {
-        return new NotificationTarget("SHARE", shareId, "NOTE", noteId);
+        return new NotificationTarget("SHARE", shareId, "SHARE_NOTE", noteId);
     }
 
     public static NotificationTarget schedule(long scheduleId) {

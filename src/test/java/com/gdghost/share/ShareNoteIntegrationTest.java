@@ -102,7 +102,7 @@ class ShareNoteIntegrationTest {
         assertThat((String) row.get("title")).contains(member.nickname());
         assertThat(row.get("target_type")).isEqualTo("SHARE");
         assertThat(((Number) row.get("target_id")).longValue()).isEqualTo(share);
-        assertThat(row.get("sub_target_type")).isEqualTo("NOTE");
+        assertThat(row.get("sub_target_type")).isEqualTo("SHARE_NOTE");
         assertThat(((Number) row.get("sub_target_id")).longValue()).isEqualTo(id);
     }
 
