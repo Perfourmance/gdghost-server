@@ -12,6 +12,7 @@ services:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_0900_ai_ci
       - --default-time-zone=+00:00
+      - --innodb-ft-enable-stopword=OFF   # 백업 복원으로 검색 색인을 다시 만들 때도 영어 단어가 빠지지 않게
     ports:
       - "127.0.0.1:3307:3306"   # 내 컴퓨터에서만. 3306은 Mac에 직접 설치한 MySQL과 겹쳐서 3307
     volumes:

@@ -309,4 +309,22 @@ class FeedIntegrationTest {
         assertThat(attachmentCount(post)).isZero();
     }
 
+    @Test
+    void 숨긴_글의_작성자가_탈퇴하면_되돌릴_수_없다() throws Exception {
+        long post = fixtures.feedPost(author.id());
+        Cookie staff = fixtures.loginCookie(fixtures.staff());
+        long reportId = report(post);
+        handle(staff, reportId, "HIDE").andExpect(status().isOk());
+
+        mvc.perform(post("/api/v1/me/withdrawal").cookie(login).with(csrfToken())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"password\":\"" + Fixtures.PASSWORD + "\"}"))
+                .andExpect(status().isNoContent());
+
+        assertThat(jdbc.queryForObject("SELECT deleted_by FROM feed_post WHERE id = ?", String.class, post))
+                .isEqualTo("AUTHOR");
+        handle(staff, reportId, "RESTORE").andExpect(status().isConflict());
+        mvc.perform(get(URL + "/{id}", post).cookie(otherLogin)).andExpect(status().isNotFound());
+    }
+
 }
