@@ -17,12 +17,6 @@ public class MemberWithdrawalWriter {
         this.jdbc = jdbc;
     }
 
-    /** 활동 중인 운영진 수. 행을 잠가 두 운영진이 동시에 탈퇴해도 0명이 되지 않게 한다 */
-    public int lockActiveStaffCount() {
-        return jdbc.queryForList("SELECT id FROM member WHERE role = 'STAFF' AND withdrawn_at IS NULL FOR UPDATE",
-                Long.class).size();
-    }
-
     public void erase(long memberId, String email, Instant now) {
         jdbc.update("DELETE FROM member_contact WHERE member_id = ?", memberId);
         jdbc.update("DELETE FROM member_tag WHERE member_id = ?", memberId);

@@ -35,6 +35,11 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     @Query("SELECT m FROM Member m WHERE m.id = :id")
     Optional<Member> findByIdForUpdate(long id);
 
+    /** 활동 중인 운영진. 행을 잠가 동시에 탈퇴 · 해제해도 0명이 되지 않게 한다 */
+    @Query(value = "SELECT id FROM member WHERE role = 'STAFF' AND withdrawn_at IS NULL ORDER BY id FOR UPDATE",
+            nativeQuery = true)
+    List<Long> lockActiveStaffIds();
+
     /** 운영 부원 목록 — 탈퇴자 제외, 목록 숨김은 포함. 조건이 null이면 거르지 않는다. pattern은 LIKE 패턴 */
     @Query("""
             SELECT m FROM Member m

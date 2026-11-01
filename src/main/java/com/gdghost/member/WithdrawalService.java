@@ -35,7 +35,7 @@ public class WithdrawalService {
         Member member = members.findByIdForUpdate(memberId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHENTICATED));
         currentPasswords.check(member, request.password());
-        if (member.getRole() == Role.STAFF && withdrawalWriter.lockActiveStaffCount() <= 1) {
+        if (member.getRole() == Role.STAFF && members.lockActiveStaffIds().size() <= 1) {
             throw new BusinessException(ErrorCode.LAST_STAFF, "혼자 남은 운영진은 탈퇴할 수 없습니다. 다른 운영진을 먼저 지정해 주세요.");
         }
 

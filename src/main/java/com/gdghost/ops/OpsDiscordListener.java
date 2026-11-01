@@ -12,7 +12,7 @@ import com.gdghost.common.security.Role;
 import com.gdghost.member.Member;
 import com.gdghost.member.MemberRepository;
 
-/** 정지 · 해제 · 운영진 지정 → 운영진 서버에 기록 (누가 누구를). 원본은 ops_audit_log */
+/** 정지 · 해제 · 운영진 지정 · 해제 → 운영진 서버에 기록 (누가 누구를). 원본은 ops_audit_log */
 @Component
 public class OpsDiscordListener {
 
@@ -51,6 +51,14 @@ public class OpsDiscordListener {
         if (actor.map(Member::getRole).filter(Role.DEV::equals).isPresent()) {
             discord.send(DiscordChannel.DEV, message);
         }
+    }
+
+    @DomainEventListener
+    public void on(StaffRevokedEvent event) {
+        String title = event.staffTitle();
+        discord.send(DiscordChannel.STAFF, new DiscordMessage("운영진 해제", null,
+                who(event.actorId()) + " → " + who(event.memberId())
+                        + (title == null ? "" : " (" + DiscordMessage.escape(title) + ")")));
     }
 
     private String who(long memberId) {
