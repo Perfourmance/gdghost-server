@@ -30,6 +30,7 @@ public class MemberWithdrawalWriter {
                 UPDATE feed_post SET deleted_at = COALESCE(deleted_at, ?), deleted_by = 'AUTHOR'
                 WHERE author_id = ? AND (deleted_at IS NULL OR deleted_by = 'STAFF')
                 """, now, memberId);
+        jdbc.update("UPDATE coffee_chat SET accept_memo = NULL WHERE receiver_id = ?", memberId);
         jdbc.update("""
                 UPDATE coffee_chat SET state = 'EXPIRED', responded_at = ?
                 WHERE state = 'REQUESTED' AND (requester_id = ? OR receiver_id = ?)

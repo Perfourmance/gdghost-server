@@ -8,6 +8,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.gdghost.coffee.CoffeeChatWriter;
 import com.gdghost.common.audit.OpsAction;
 import com.gdghost.common.audit.OpsAudit;
 import com.gdghost.common.audit.OpsAuditLogger;
@@ -27,20 +28,22 @@ public class SuspensionService {
     private final MemberRepository members;
     private final LoginTokenService loginTokens;
     private final OpsAuditLogger opsAudit;
+    private final CoffeeChatWriter coffeeChats;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public SuspensionService(MemberRepository members, LoginTokenService loginTokens, OpsAuditLogger opsAudit,
-            ApplicationEventPublisher events, Clock clock) {
+            CoffeeChatWriter coffeeChats, ApplicationEventPublisher events, Clock clock) {
         this.members = members;
         this.loginTokens = loginTokens;
         this.opsAudit = opsAudit;
+        this.coffeeChats = coffeeChats;
         this.events = events;
         this.clock = clock;
     }
 
     /** 이미 정지된 부원이면 그대로 두고 지금 상태를 돌려준다 (멱등) */
-    // 보내지 않은 지목은 라우팅 배치가 보낼 때 취소한다. TODO 응답 대기 커피챗 만료(커피챗 단계)
+    // 보내지 않은 지목은 라우팅 배치가 보낼 때 취소한다
     @Transactional
     public SuspensionResponse suspend(long staffId, long memberId, String reason) {
         if (staffId == memberId) {
@@ -54,6 +57,7 @@ public class SuspensionService {
             String trimmed = reason.strip();
             member.suspend(trimmed, staffId, clock.instant());
             loginTokens.revokeAll(memberId);
+            coffeeChats.expirePending(memberId);
             opsAudit.record(OpsAudit.of(staffId, OpsAction.SUSPEND)
                     .targetMember(memberId)
                     .detail(Map.of("reason", trimmed)));
@@ -76,8 +80,9 @@ public class SuspensionService {
         events.publishEvent(new MemberUnsuspendedEvent(staffId, memberId));
     }
 
+    /** 잠가서 진행 중인 커피챗 신청과 줄 세운다. 신청이 먼저 커밋돼도 만료에서 빠지지 않는다 */
     private Member find(long memberId) {
-        return members.findById(memberId)
+        return members.findByIdForUpdate(memberId)
                 .filter(found -> found.getWithdrawnAt() == null)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
     }

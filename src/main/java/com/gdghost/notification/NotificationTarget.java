@@ -31,6 +31,10 @@ public record NotificationTarget(String type, long id, String subType, Long subI
         return new NotificationTarget("RECRUIT", recruitId, null, null);
     }
 
+    public static NotificationTarget coffeeChat(long coffeeChatId) {
+        return new NotificationTarget("COFFEE_CHAT", coffeeChatId, null, null);
+    }
+
     public static NotificationTarget member(long memberId) {
         return new NotificationTarget("MEMBER", memberId, null, null);
     }
