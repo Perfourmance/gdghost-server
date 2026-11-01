@@ -1,12 +1,14 @@
 package com.gdghost.routing;
 
 import java.time.Clock;
+import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 import java.util.Map;
 
@@ -25,7 +27,7 @@ import tools.jackson.databind.ObjectMapper;
 
 /** 운영 화면 조회. 익명 질문의 질문자는 어떤 응답에도 넣지 않는다 */
 @Repository
-class OpsRoutingReader {
+public class OpsRoutingReader {
 
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
     private static final TypeReference<Map<String, Object>> DETAIL = new TypeReference<>() {
@@ -42,7 +44,7 @@ class OpsRoutingReader {
     }
 
     /** 오래 기다린 순 */
-    OpsPage<OpsRoutingResponse.StaleQuestion> staleQuestions(long viewerId, int page, int size) {
+    public OpsPage<OpsRoutingResponse.StaleQuestion> staleQuestions(long viewerId, int page, int size) {
         Instant now = clock.instant();
         MapSqlParameterSource params = new MapSqlParameterSource("before", utc(now.minus(RoutingJob.STALE_AFTER)))
                 .addValue("limit", size).addValue("offset", (long) page * size);
@@ -102,6 +104,19 @@ class OpsRoutingReader {
                     detail == null ? null : json.readValue(detail, DETAIL));
         });
         return new OpsPage<>(items, page, size, total == null ? 0 : total);
+    }
+
+    /** 이번 주(한국 시간 월요일 00시부터) 올라온 질문과 아직 답이 없는 수, 이번 주에 보낸 알림의 전환율 */
+    public OpsRoutingResponse.ThisWeek thisWeek() {
+        LocalDate today = LocalDate.now(clock.withZone(KST));
+        LocalDate monday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        OpsRoutingResponse.Stats stats = stats(monday, today);
+        return jdbc.queryForObject("""
+                SELECT COUNT(*) AS questions, COALESCE(SUM(state = 'WAITING'), 0) AS unanswered
+                FROM question
+                WHERE deleted_at IS NULL AND created_at >= :start
+                """, Map.of("start", startOf(monday)), (rs, i) -> new OpsRoutingResponse.ThisWeek(
+                rs.getLong("questions"), rs.getLong("unanswered"), stats.conversionRate()));
     }
 
     /** 기간은 한국 날짜, 보낸 시각 기준 */
