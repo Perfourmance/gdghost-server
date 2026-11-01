@@ -40,6 +40,17 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
             nativeQuery = true)
     List<Long> lockActiveStaffIds();
 
+    /** 졸업 처리 대상 — 활동 중인 재학 · 휴학. 학번 조건이 있으면 학번이 없는 사람은 빠진다 */
+    @Query("""
+            SELECT m FROM Member m
+            WHERE m.withdrawnAt IS NULL AND m.suspendedAt IS NULL
+              AND m.status <> com.gdghost.member.MemberStatus.GRADUATED
+              AND (:generation IS NULL OR m.generation = :generation)
+              AND (:studentNoMax IS NULL OR m.studentNo <= :studentNoMax)
+            ORDER BY m.generation, m.studentNo, m.id
+            """)
+    List<Member> findGraduationCandidates(Integer generation, String studentNoMax);
+
     /** 운영 부원 목록 — 탈퇴자 제외, 목록 숨김은 포함. 조건이 null이면 거르지 않는다. pattern은 LIKE 패턴 */
     @Query("""
             SELECT m FROM Member m

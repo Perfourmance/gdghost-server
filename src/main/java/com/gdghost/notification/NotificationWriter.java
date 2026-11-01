@@ -81,6 +81,29 @@ public class NotificationWriter {
         }
     }
 
+    /** 정해진 사람들 각자의 프로필로 가는 알림. 앱 내만 */
+    public void toOwnProfiles(List<Long> memberIds, NotificationType type, String title, String body) {
+        if (memberIds.isEmpty()) {
+            return;
+        }
+        jdbc.update("""
+                INSERT INTO notification (member_id, type, title, body, target_type, target_id, created_at)
+                SELECT id, :type, :title, :body, 'MEMBER', id, :now
+                FROM member
+                WHERE id IN (:memberIds) AND withdrawn_at IS NULL AND suspended_at IS NULL
+                """, params(type, title, body, NotificationTarget.member(0)).addValue("memberIds", memberIds));
+    }
+
+    /** 부원 전체 각자의 프로필로 가는 알림. 앱 내만 @return 받은 사람 수 */
+    public int toAllOwnProfiles(NotificationType type, String title, String body) {
+        return jdbc.update("""
+                INSERT INTO notification (member_id, type, title, body, target_type, target_id, created_at)
+                SELECT id, :type, :title, :body, 'MEMBER', id, :now
+                FROM member
+                WHERE withdrawn_at IS NULL AND suspended_at IS NULL
+                """, params(type, title, body, NotificationTarget.member(0)));
+    }
+
     /** @return 실제로 읽음이 된 수. 남의 알림 id는 조용히 무시 */
     int markRead(long memberId, List<Long> ids) {
         return jdbc.update("""
