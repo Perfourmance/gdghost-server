@@ -206,6 +206,12 @@ public class Member {
         this.updatedAt = now;
     }
 
+    public void revokeStaff(Instant now) {
+        this.role = Role.MEMBER;
+        this.staffTitle = null;
+        this.updatedAt = now;
+    }
+
     public boolean isSuspended() {
         return suspendedAt != null;
     }
