@@ -66,7 +66,7 @@ public class QuestionController {
     }
 
     @Operation(summary = "질문 상세", description = "답변 트리 포함(채택 먼저, 나머지 오래된 순, depth 3까지). "
-            + "조회수는 부원당 하루 1회, 글쓴이 본인은 세지 않는다. 없거나 삭제 · 숨김이면 404. routing은 전달 현황, 없으면 null. 익명 질문은 reasons 빈 배열 + reasonsHidden.")
+            + "조회수는 부원당 하루 1회, 글쓴이 본인은 세지 않는다. 없거나 삭제 · 숨김이면 404. routing은 전달 현황, 없으면 null. 익명 질문은 reasonsHidden, 받은 본인 줄이 아니면 to null + reasons 빈 배열(운영진 단계는 그대로).")
     @GetMapping("/{questionId}")
     public QuestionDetail detail(@AuthenticationPrincipal AuthMember me, @PathVariable long questionId) {
         return questionService.detail(me.id(), questionId);

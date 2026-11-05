@@ -436,11 +436,47 @@ class RoutingIntegrationTest {
         mvc.perform(get("/api/v1/questions/{id}", question).cookie(fixtures.loginCookie(author)))
                 .andExpect(jsonPath("$.routing.reasonsHidden").value(true))
                 .andExpect(jsonPath("$.routing.deliveries[0].state").value("SENT"))
+                .andExpect(jsonPath("$.routing.deliveries[0].to").isEmpty())
                 .andExpect(jsonPath("$.routing.deliveries[0].reasons").isEmpty());
         mvc.perform(get("/api/v1/questions/{id}", question).cookie(fixtures.loginCookie(receiver)))
                 .andExpect(jsonPath("$.routing.deliveries[0].state").value("ANSWERED"))
                 .andExpect(jsonPath("$.routing.mine.state").value("ANSWERED"))
                 .andExpect(jsonPath("$.routing.mine.canPass").value(false));
+    }
+
+    @Test
+    void 익명_질문은_받은_사람_이름과_사유를_본인에게만_보여_준다() throws Exception {
+        TestMember target = candidate("인턴");
+        TestMember other = fixtures.member();
+        long question = fixtures.question(author.id(), true);
+        age(question, hours(3));
+
+        route(DAY);
+
+        for (TestMember viewer : List.of(author, other)) {
+            mvc.perform(get("/api/v1/questions/{id}", question).cookie(fixtures.loginCookie(viewer)))
+                    .andExpect(jsonPath("$.routing.deliveries[0].stage").value("MEMBER"))
+                    .andExpect(jsonPath("$.routing.deliveries[0].state").value("SENT"))
+                    .andExpect(jsonPath("$.routing.deliveries[0].to").isEmpty())
+                    .andExpect(jsonPath("$.routing.deliveries[0].reasons").isEmpty());
+        }
+        mvc.perform(get("/api/v1/questions/{id}", question).cookie(fixtures.loginCookie(target)))
+                .andExpect(jsonPath("$.routing.reasonsHidden").value(true))
+                .andExpect(jsonPath("$.routing.deliveries[0].to.nickname").value(target.nickname()))
+                .andExpect(jsonPath("$.routing.deliveries[0].reasons[0]").value("경험: 인턴"));
+    }
+
+    @Test
+    void 익명_지목_질문은_글쓴이에게도_받은_사람_이름을_가린다() throws Exception {
+        TestMember target = fixtures.member();
+        long question = fixtures.question(author.id(), true);
+        direct(question, target.id(), DAY);
+
+        mvc.perform(get("/api/v1/questions/{id}", question).cookie(fixtures.loginCookie(author)))
+                .andExpect(jsonPath("$.routing.deliveries[0].stage").value("DIRECT"))
+                .andExpect(jsonPath("$.routing.deliveries[0].to").isEmpty());
+        mvc.perform(get("/api/v1/questions/{id}", question).cookie(fixtures.loginCookie(target)))
+                .andExpect(jsonPath("$.routing.deliveries[0].to.nickname").value(target.nickname()));
     }
 
     @Test
