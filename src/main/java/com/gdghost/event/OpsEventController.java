@@ -32,8 +32,8 @@ public class OpsEventController {
         this.opsEventService = opsEventService;
     }
 
-    @Operation(summary = "이벤트 생성", description = "Idempotency-Key 필수. 4단계 안내는 정확히 4개. 만든다고 알림이 가지 않는다. "
-            + "응답은 이벤트 상세 모양.")
+    @Operation(summary = "이벤트 생성", description = "Idempotency-Key 필수. 4단계 안내는 정확히 4개. photoRequired는 없으면 true. "
+            + "만든다고 알림이 가지 않는다. 응답은 이벤트 상세 모양.")
     @Idempotent
     @PostMapping
     public ResponseEntity<EventDetail> create(@AuthenticationPrincipal AuthMember me,
@@ -42,7 +42,8 @@ public class OpsEventController {
         return ResponseEntity.created(URI.create("/api/v1/events/" + event.id())).body(event);
     }
 
-    @Operation(summary = "이벤트 수정", description = "보낸 필드만 바꾼다. 삭제는 없고 기간을 끝내면 종료된다.")
+    @Operation(summary = "이벤트 수정", description = "보낸 필드만 바꾼다. photoRequired는 인증이 올라온 뒤에도 바꿀 수 있고, "
+            + "이미 올라온 인증은 그대로 둔다. 삭제는 없고 기간을 끝내면 종료된다.")
     @PatchMapping("/{eventId}")
     public EventDetail update(@AuthenticationPrincipal AuthMember me, @PathVariable long eventId,
             @RequestBody @Valid EventUpdateRequest request) {

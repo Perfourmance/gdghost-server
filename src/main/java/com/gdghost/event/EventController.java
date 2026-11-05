@@ -34,7 +34,7 @@ public class EventController {
     }
 
     @Operation(summary = "이벤트 상세", description = "설명 · 4단계 안내 · 내 인증 현황 · 참여 순위(인증 횟수 상위 10명, 같은 횟수는 같은 순위). "
-            + "pendingCount는 운영진에게만, 아니면 null.")
+            + "photoRequired면 인증에 사진 1장 이상. pendingCount는 운영진에게만, 아니면 null.")
     @GetMapping("/{eventId}")
     public EventDetail detail(@AuthenticationPrincipal AuthMember me, @PathVariable long eventId) {
         return eventService.detail(me, eventId);

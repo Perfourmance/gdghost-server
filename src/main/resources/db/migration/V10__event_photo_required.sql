@@ -1,0 +1,1 @@
+ALTER TABLE event ADD COLUMN photo_required BOOLEAN NOT NULL DEFAULT TRUE AFTER guide_steps;

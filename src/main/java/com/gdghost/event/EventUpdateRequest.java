@@ -14,7 +14,8 @@ public record EventUpdateRequest(
         LocalDate endDate,
         @Size(min = 1, max = 1000) String description,
         @Size(min = 1, max = 100) String requirement,
-        @Size(min = 4, max = 4) List<@Pattern(regexp = ".*\\S.*") @Size(max = 60) String> guideSteps) {
+        @Size(min = 4, max = 4) List<@Pattern(regexp = ".*\\S.*") @Size(max = 60) String> guideSteps,
+        Boolean photoRequired) {
 
     public EventUpdateRequest {
         name = EventCreateRequest.strip(name);
@@ -26,7 +27,7 @@ public record EventUpdateRequest(
     @AssertTrue(message = "바꿀 필드를 하나 이상 보내야 합니다.")
     boolean isChanging() {
         return name != null || startDate != null || endDate != null || description != null || requirement != null
-                || guideSteps != null;
+                || guideSteps != null || photoRequired != null;
     }
 
 }

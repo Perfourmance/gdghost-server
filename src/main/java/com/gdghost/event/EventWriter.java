@@ -22,24 +22,25 @@ class EventWriter {
     }
 
     long insert(long createdBy, String name, LocalDate startDate, LocalDate endDate, String description,
-            String requirement, String guideSteps) {
+            String requirement, String guideSteps, boolean photoRequired) {
         return new SimpleJdbcInsert(jdbc).withTableName("event").usingGeneratedKeyColumns("id")
                 .usingColumns("created_by", "name", "start_date", "end_date", "description", "requirement",
-                        "guide_steps", "created_at")
+                        "guide_steps", "photo_required", "created_at")
                 .executeAndReturnKey(Map.of("created_by", createdBy, "name", name, "start_date", startDate,
                         "end_date", endDate, "description", description, "requirement", requirement,
-                        "guide_steps", guideSteps, "created_at", now()))
+                        "guide_steps", guideSteps, "photo_required", photoRequired, "created_at", now()))
                 .longValue();
     }
 
     void update(long eventId, String name, LocalDate startDate, LocalDate endDate, String description,
-            String requirement, String guideSteps) {
+            String requirement, String guideSteps, boolean photoRequired) {
         jdbc.update("""
                 UPDATE event
                 SET name = ?, start_date = ?, end_date = ?, description = ?, requirement = ?, guide_steps = ?,
-                    updated_at = ?
+                    photo_required = ?, updated_at = ?
                 WHERE id = ?
-                """, name, startDate, endDate, description, requirement, guideSteps, now(), eventId);
+                """, name, startDate, endDate, description, requirement, guideSteps, photoRequired,
+                now(), eventId);
     }
 
     private LocalDateTime now() {

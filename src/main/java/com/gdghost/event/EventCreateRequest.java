@@ -14,13 +14,15 @@ public record EventCreateRequest(
         @NotNull LocalDate endDate,
         @NotBlank @Size(max = 1000) String description,
         @NotBlank @Size(max = 100) String requirement,
-        @NotNull @Size(min = 4, max = 4) List<@NotBlank @Size(max = 60) String> guideSteps) {
+        @NotNull @Size(min = 4, max = 4) List<@NotBlank @Size(max = 60) String> guideSteps,
+        Boolean photoRequired) {
 
     public EventCreateRequest {
         name = strip(name);
         description = strip(description);
         requirement = strip(requirement);
         guideSteps = strip(guideSteps);
+        photoRequired = photoRequired == null || photoRequired;
     }
 
     static String strip(String text) {

@@ -5,7 +5,7 @@ import java.util.List;
 
 /** pendingCount는 운영진에게만, 아니면 null */
 public record EventDetail(long id, String name, String description, String requirement, List<String> guideSteps,
-        LocalDate startDate, LocalDate endDate, EventState state, My my, List<Rank> ranking, Long pendingCount) {
+        boolean photoRequired, LocalDate startDate, LocalDate endDate, EventState state, My my, List<Rank> ranking, Long pendingCount) {
 
     public record My(long approvedCount, long pendingCount, List<Rejected> rejected) {
     }
