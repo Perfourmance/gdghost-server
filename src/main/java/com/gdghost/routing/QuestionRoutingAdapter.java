@@ -76,8 +76,12 @@ public class QuestionRoutingAdapter implements RoutingPort {
             return null;
         }
         List<QuestionRouting.Delivery> deliveries = rows.stream()
-                .map(row -> new QuestionRouting.Delivery(row.stage(), state(row, anonymous, viewerId),
-                        new QuestionRouting.To(nickname(row)), anonymous ? List.of() : reasons(row), row.sentAt()))
+                .map(row -> {
+                    boolean hide = hidden(row, anonymous, viewerId);
+                    return new QuestionRouting.Delivery(row.stage(), state(row, anonymous, viewerId),
+                            hide ? null : new QuestionRouting.To(nickname(row)), hide ? List.of() : reasons(row),
+                            row.sentAt());
+                })
                 .toList();
         QuestionRouting.Mine mine = rows.stream()
                 .filter(row -> row.memberId() == viewerId && !"STAFF".equals(row.stage()))
@@ -85,6 +89,14 @@ public class QuestionRoutingAdapter implements RoutingPort {
                 .map(row -> new QuestionRouting.Mine(row.state(), "SENT".equals(row.state())))
                 .orElse(null);
         return new QuestionRouting(deliveries, anonymous, mine);
+    }
+
+    /**
+     * 익명 질문에서 받은 사람 이름 · 사유를 보이면 익명 답변을 쓴 사람이 좁혀진다. 글쓴이(지목한 사람 포함)에게도 가리고
+     * 받은 본인에게만 보여 준다. 운영진 단계는 개인이 아니라 그대로
+     */
+    private static boolean hidden(RoutingReader.Delivery row, boolean anonymous, long viewerId) {
+        return anonymous && row.memberId() != viewerId && !"STAFF".equals(row.stage());
     }
 
     /** 익명 질문에서 '답변함'을 보이면 익명 답변을 쓴 사람이 드러난다. 본인에게만 그대로 보여 준다 */
