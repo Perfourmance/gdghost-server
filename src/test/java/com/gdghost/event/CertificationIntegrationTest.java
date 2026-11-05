@@ -161,6 +161,55 @@ class CertificationIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM certification", Integer.class)).isZero();
     }
 
+    private long photoOptional() {
+        long id = event(today.minusDays(1), today.plusDays(1));
+        jdbc.update("UPDATE event SET photo_required = FALSE WHERE id = ?", id);
+        return id;
+    }
+
+    @Test
+    void 사진_필수_이벤트는_사진이_0장이면_400이고_1장이면_올라간다() throws Exception {
+        submit(member, eventId, "{\"body\":\"한 줄\",\"photoKeys\":[]}").andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.errors[0].field").value("photoKeys"))
+                .andExpect(jsonPath("$.errors[0].message").value("이 이벤트는 사진이 필요합니다."));
+        submit(member, eventId, "{\"body\":\"한 줄\"}").andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+        submit(member, eventId, body("한 줄", photo(member))).andExpect(status().isCreated());
+
+        long id = rejected(member);
+        resubmit(member, id, "{\"photoKeys\":[]}").andExpect(jsonPath("$.errors[0].field").value("photoKeys"));
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM attachment WHERE owner_id = ?", Integer.class, id))
+                .isEqualTo(1);
+    }
+
+    @Test
+    void 사진_선택_이벤트는_사진_없이_올리고_다시_올리며_사진을_뺄_수_있다() throws Exception {
+        long optional = photoOptional();
+        submit(member, optional, "{\"body\":\"한 줄\",\"photoKeys\":[]}").andExpect(status().isCreated())
+                .andExpect(jsonPath("$.photos").isEmpty());
+
+        String response = submit(member, optional, body("사진도", photo(member))).andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        long id = ((Number) JsonPath.read(response, "$.id")).longValue();
+        jdbc.update("UPDATE certification SET state = 'REJECTED', reject_reason = '흐려요' WHERE id = ?", id);
+
+        resubmit(member, id, "{\"photoKeys\":[]}").andExpect(status().isOk())
+                .andExpect(jsonPath("$.state").value("PENDING"))
+                .andExpect(jsonPath("$.photos").isEmpty());
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM attachment WHERE owner_id = ?", Integer.class, id))
+                .isZero();
+    }
+
+    @Test
+    void 필수에서_선택으로_바꾸면_사진_없이_올릴_수_있고_올라온_인증은_그대로다() throws Exception {
+        long before = submitted(member);
+        jdbc.update("UPDATE event SET photo_required = FALSE WHERE id = ?", eventId);
+
+        submit(member, eventId, "{\"body\":\"한 줄\",\"photoKeys\":[]}").andExpect(status().isCreated());
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM attachment WHERE owner_id = ?", Integer.class, before))
+                .isEqualTo(1);
+    }
+
     @Test
     void 없는_이벤트와_인증은_404() throws Exception {
         submit(member, 999_999, body("한 줄", photo(member))).andExpect(status().isNotFound());

@@ -44,7 +44,8 @@ public class OpsEventService {
     @Transactional
     public EventDetail create(AuthMember me, EventCreateRequest request) {
         long id = writer.insert(me.id(), request.name(), request.startDate(), request.endDate(),
-                request.description(), request.requirement(), json.writeValueAsString(request.guideSteps()));
+                request.description(), request.requirement(), json.writeValueAsString(request.guideSteps()),
+                request.photoRequired());
         return eventService.detail(me, id);
     }
 
@@ -63,13 +64,15 @@ public class OpsEventService {
         String requirement = request.requirement() != null ? request.requirement() : event.requirement();
         List<String> steps = request.guideSteps() != null ? request.guideSteps()
                 : eventService.guideSteps(event.guideSteps());
+        boolean photoRequired = request.photoRequired() != null ? request.photoRequired() : event.photoRequired();
         boolean changed = !name.equals(event.name()) || !startDate.equals(event.startDate())
                 || !endDate.equals(event.endDate()) || !Objects.equals(description, event.description())
                 || !Objects.equals(requirement, event.requirement())
-                || !steps.equals(eventService.guideSteps(event.guideSteps()));
+                || !steps.equals(eventService.guideSteps(event.guideSteps()))
+                || photoRequired != event.photoRequired();
         if (changed) {
             writer.update(eventId, name, startDate, endDate, description, requirement,
-                    json.writeValueAsString(steps));
+                    json.writeValueAsString(steps), photoRequired);
         }
         return eventService.detail(me, eventId);
     }

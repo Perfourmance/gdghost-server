@@ -26,12 +26,13 @@ class EventReader {
         this.jdbc = jdbc;
     }
 
-    record SummaryRow(long id, String name, LocalDate startDate, LocalDate endDate, long participantCount,
+    record SummaryRow(long id, String name, LocalDate startDate, LocalDate endDate, boolean photoRequired,
+            long participantCount,
             long approvedCount, long myApprovedCount, long myPendingCount) {
     }
 
     record DetailRow(long id, String name, String description, String requirement, String guideSteps,
-            LocalDate startDate, LocalDate endDate) {
+            LocalDate startDate, LocalDate endDate, boolean photoRequired) {
     }
 
     record CertificationRow(long id, AuthorRef.Row author, String body, CertificationState state, String rejectReason,
@@ -41,27 +42,28 @@ class EventReader {
     /** 집계를 조인으로 한 번에 읽는다 */
     List<SummaryRow> list(long viewerId) {
         return jdbc.query("""
-                SELECT e.id, e.name, e.start_date, e.end_date,
+                SELECT e.id, e.name, e.start_date, e.end_date, e.photo_required,
                        COUNT(DISTINCT c.member_id) AS participant_count,
                        COALESCE(SUM(c.state = 'APPROVED'), 0) AS approved_count,
                        COALESCE(SUM(c.state = 'APPROVED' AND c.member_id = :viewer), 0) AS my_approved,
                        COALESCE(SUM(c.state = 'PENDING' AND c.member_id = :viewer), 0) AS my_pending
                 FROM event e
                 LEFT JOIN certification c ON c.event_id = e.id
-                GROUP BY e.id, e.name, e.start_date, e.end_date
+                GROUP BY e.id, e.name, e.start_date, e.end_date, e.photo_required
                 """, Map.of("viewer", viewerId), (rs, i) -> new SummaryRow(rs.getLong("id"), rs.getString("name"),
                 rs.getObject("start_date", LocalDate.class), rs.getObject("end_date", LocalDate.class),
-                rs.getLong("participant_count"), rs.getLong("approved_count"), rs.getLong("my_approved"),
+                rs.getBoolean("photo_required"), rs.getLong("participant_count"), rs.getLong("approved_count"), rs.getLong("my_approved"),
                 rs.getLong("my_pending")));
     }
 
     Optional<DetailRow> find(long eventId) {
         return jdbc.query("""
-                SELECT id, name, description, requirement, guide_steps, start_date, end_date
+                SELECT id, name, description, requirement, guide_steps, start_date, end_date, photo_required
                 FROM event WHERE id = :id
                 """, Map.of("id", eventId), (rs, i) -> new DetailRow(rs.getLong("id"), rs.getString("name"),
                 rs.getString("description"), rs.getString("requirement"), rs.getString("guide_steps"),
-                rs.getObject("start_date", LocalDate.class), rs.getObject("end_date", LocalDate.class)))
+                rs.getObject("start_date", LocalDate.class), rs.getObject("end_date", LocalDate.class),
+                rs.getBoolean("photo_required")))
                 .stream().findFirst();
     }
 

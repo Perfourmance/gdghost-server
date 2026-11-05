@@ -50,7 +50,8 @@ public class EventService {
         LocalDate today = today();
         List<EventSummary> items = reader.list(viewerId).stream()
                 .map(row -> new EventSummary(row.id(), row.name(), row.startDate(), row.endDate(),
-                        EventState.of(row.startDate(), row.endDate(), today), row.participantCount(),
+                        EventState.of(row.startDate(), row.endDate(), today), row.photoRequired(),
+                        row.participantCount(),
                         row.approvedCount(), new EventSummary.My(row.myApprovedCount(), row.myPendingCount())))
                 .filter(event -> state == null || event.state() == state)
                 .sorted(ORDER)
@@ -80,7 +81,7 @@ public class EventService {
                 reader.rejected(eventId, viewer.id()));
         Long pending = viewer.role() == Role.STAFF ? reader.pendingForStaff(eventId) : null;
         return new EventDetail(event.id(), event.name(), event.description(), event.requirement(),
-                guideSteps(event.guideSteps()), event.startDate(), event.endDate(),
+                guideSteps(event.guideSteps()), event.photoRequired(), event.startDate(), event.endDate(),
                 EventState.of(event.startDate(), event.endDate(), today()), my, ranking(eventId), pending);
     }
 

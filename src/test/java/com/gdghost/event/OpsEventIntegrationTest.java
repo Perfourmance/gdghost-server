@@ -137,6 +137,24 @@ class OpsEventIntegrationTest {
     }
 
     @Test
+    void 사진_필수는_기본_켜짐이고_만들_때와_고칠_때_정한다() throws Exception {
+        long defaulted = ongoing();
+        mvc.perform(get("/api/v1/events/{id}", defaulted).cookie(fixtures.loginCookie(fixtures.member())))
+                .andExpect(jsonPath("$.photoRequired").value(true));
+        mvc.perform(get("/api/v1/events").cookie(fixtures.loginCookie(fixtures.member())))
+                .andExpect(jsonPath("$.items[?(@.id == %d)].photoRequired".formatted(defaulted)).value(true));
+
+        String optional = body("맛집", today, today, STEPS).replace("}", ",\"photoRequired\":false}");
+        create(staff, optional).andExpect(status().isCreated()).andExpect(jsonPath("$.photoRequired").value(false));
+
+        update(defaulted, "{\"photoRequired\":false}").andExpect(status().isOk())
+                .andExpect(jsonPath("$.photoRequired").value(false))
+                .andExpect(jsonPath("$.name").value("맛집 챌린지"));
+        assertThat(jdbc.queryForObject("SELECT photo_required FROM event WHERE id = ?", Boolean.class, defaulted))
+                .isFalse();
+    }
+
+    @Test
     void 바뀐_것이_없으면_수정_시각을_남기지_않는다() throws Exception {
         long id = ongoing();
 
