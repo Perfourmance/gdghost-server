@@ -5,11 +5,16 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.gdghost.common.audit.OpsAction;
+import com.gdghost.common.audit.OpsAudit;
+import com.gdghost.common.audit.OpsAuditLogger;
+import com.gdghost.common.audit.OpsTargetType;
 import com.gdghost.common.error.BusinessException;
 import com.gdghost.common.error.ErrorCode;
 import com.gdghost.common.error.ErrorField;
@@ -27,12 +32,15 @@ public class ScheduleService {
     private final ScheduleRepository schedules;
     private final ScheduleReader reader;
     private final JdbcTemplate jdbc;
+    private final OpsAuditLogger opsAudit;
     private final Clock clock;
 
-    public ScheduleService(ScheduleRepository schedules, ScheduleReader reader, JdbcTemplate jdbc, Clock clock) {
+    public ScheduleService(ScheduleRepository schedules, ScheduleReader reader, JdbcTemplate jdbc,
+            OpsAuditLogger opsAudit, Clock clock) {
         this.schedules = schedules;
         this.reader = reader;
         this.jdbc = jdbc;
+        this.opsAudit = opsAudit;
         this.clock = clock;
     }
 
@@ -102,19 +110,27 @@ public class ScheduleService {
             throw new BusinessException(ErrorCode.VALIDATION_FAILED, null,
                     List.of(new ErrorField("endDate", "종료일은 시작일 이후여야 합니다.")));
         }
-        schedule.edit(request.kind() != null ? request.kind() : schedule.getKind(),
+        List<String> changed = schedule.edit(request.kind() != null ? request.kind() : schedule.getKind(),
                 request.title() != null ? request.title() : schedule.getTitle(),
                 startDate, endDate,
                 request.place() != null ? ScheduleUpdateRequest.textOrNull(request.place()) : schedule.getPlace(),
                 request.memo() != null ? ScheduleUpdateRequest.textOrNull(request.memo()) : schedule.getMemo(),
-                clock.instant());
+                me.id(), clock.instant());
+        if (!changed.isEmpty() && schedule.getAuthorId() != me.id()) {
+            opsAudit.record(audit(me, OpsAction.SCHEDULE_EDIT, schedule).detail(Map.of("fields", changed)));
+        }
         return detail(schedule, me.id());
     }
 
     /** 연결된 모집은 남기고 연결만 끊는다 */
     @Transactional
     public void delete(AuthMember me, long scheduleId) {
-        writable(me, scheduleId).delete(clock.instant());
+        Schedule schedule = writable(me, scheduleId);
+        schedule.delete(clock.instant());
+        if (schedule.getAuthorId() != me.id()) {
+            opsAudit.record(audit(me, OpsAction.SCHEDULE_DELETE, schedule)
+                    .detail(Map.of("title", schedule.getTitle())));
+        }
         jdbc.update("UPDATE recruit SET schedule_id = NULL WHERE schedule_id = ?", scheduleId);
     }
 
@@ -124,6 +140,12 @@ public class ScheduleService {
             throw new BusinessException(ErrorCode.NOT_AUTHOR);
         }
         return schedule;
+    }
+
+    /** 남의 일정을 고치는 건 운영진뿐이라 운영 기록으로 남긴다 */
+    private static OpsAudit audit(AuthMember me, OpsAction action, Schedule schedule) {
+        return OpsAudit.of(me.id(), action).targetMember(schedule.getAuthorId())
+                .target(OpsTargetType.SCHEDULE, schedule.getId());
     }
 
     private Schedule found(long scheduleId) {
@@ -141,8 +163,8 @@ public class ScheduleService {
     private ScheduleDetail detail(Schedule schedule, long viewerId) {
         return new ScheduleDetail(schedule.getId(), schedule.getKind(), schedule.isOfficial(), schedule.getTitle(),
                 schedule.getStartDate(), schedule.getEndDate(), schedule.getPlace(), schedule.getMemo(),
-                reader.author(schedule.getAuthorId()), schedule.getAuthorId() == viewerId,
-                reader.relatedRecruits(schedule.getId(), clock.instant()));
+                reader.author(schedule.getAuthorId()), schedule.getAuthorId() == viewerId, schedule.getUpdatedAt(),
+                schedule.editedByStaff(), reader.relatedRecruits(schedule.getId(), clock.instant()));
     }
 
     private List<?> items(AuthMember viewer, List<ScheduleReader.Row> rows) {

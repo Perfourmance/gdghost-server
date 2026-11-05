@@ -308,6 +308,76 @@ class ScheduleIntegrationTest {
                 .isTrue();
     }
 
+    private long updatedBy(long id) {
+        return jdbc.queryForObject("SELECT updated_by FROM schedule WHERE id = ?", Long.class, id);
+    }
+
+    private int audits() {
+        return jdbc.queryForObject("SELECT COUNT(*) FROM ops_audit_log", Integer.class);
+    }
+
+    @Test
+    void 본인이_고치면_수정자는_본인이고_운영_기록은_없다() throws Exception {
+        long id = single(member.id(), "JOB", "채용", today);
+        mvc.perform(get(URL + "/{id}", id).cookie(fixtures.loginCookie(member)))
+                .andExpect(jsonPath("$.updatedAt").doesNotExist())
+                .andExpect(jsonPath("$.editedByStaff").value(false));
+
+        update(member, id, "{\"title\":\"새 제목\"}").andExpect(status().isOk())
+                .andExpect(jsonPath("$.updatedAt").exists())
+                .andExpect(jsonPath("$.editedByStaff").value(false));
+
+        assertThat(updatedBy(id)).isEqualTo(member.id());
+        assertThat(audits()).isZero();
+    }
+
+    @Test
+    void 운영진이_남의_일정을_고치면_표시되고_바뀐_필드를_기록한다() throws Exception {
+        long id = single(member.id(), "JOB", "채용", today);
+
+        update(staff, id, "{\"title\":\"새 제목\",\"place\":\"온라인\",\"memo\":\"\"}")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.editedByStaff").value(true));
+        mvc.perform(get(URL + "/{id}", id).cookie(fixtures.loginCookie(member)))
+                .andExpect(jsonPath("$.updatedAt").exists())
+                .andExpect(jsonPath("$.editedByStaff").value(true));
+
+        assertThat(updatedBy(id)).isEqualTo(staff.id());
+        Map<String, Object> audit = jdbc.queryForMap("SELECT * FROM ops_audit_log");
+        assertThat(audit).containsEntry("actor_id", staff.id()).containsEntry("action", "SCHEDULE_EDIT")
+                .containsEntry("target_member_id", member.id()).containsEntry("target_type", "SCHEDULE")
+                .containsEntry("target_id", id);
+        assertThat(audit.get("detail").toString()).contains("title", "place").doesNotContain("memo");
+    }
+
+    @Test
+    void 바뀐_것이_없는_수정은_수정자도_기록도_남기지_않는다() throws Exception {
+        long id = single(member.id(), "JOB", "채용", today);
+
+        update(staff, id, "{\"title\":\"채용\"}").andExpect(status().isOk())
+                .andExpect(jsonPath("$.editedByStaff").value(false));
+
+        assertThat(jdbc.queryForObject("SELECT updated_by IS NULL FROM schedule WHERE id = ?", Boolean.class, id))
+                .isTrue();
+        assertThat(audits()).isZero();
+    }
+
+    @Test
+    void 운영진이_남의_일정을_지우면_제목을_기록하고_본인_일정은_기록하지_않는다() throws Exception {
+        long others = single(member.id(), "CONTEST", "해커톤", today);
+        long own = single(staff.id(), "CLUB", "정기 모임", today);
+
+        mvc.perform(delete(URL + "/{id}", others).cookie(fixtures.loginCookie(staff)).with(csrfToken()))
+                .andExpect(status().isNoContent());
+        mvc.perform(delete(URL + "/{id}", own).cookie(fixtures.loginCookie(staff)).with(csrfToken()))
+                .andExpect(status().isNoContent());
+
+        Map<String, Object> audit = jdbc.queryForMap("SELECT * FROM ops_audit_log");
+        assertThat(audit).containsEntry("action", "SCHEDULE_DELETE").containsEntry("target_member_id", member.id())
+                .containsEntry("target_id", others);
+        assertThat(audit.get("detail").toString()).contains("해커톤");
+    }
+
     @Test
     void 홈은_마감이_가까운_일정_3개를_준다() throws Exception {
         single(member.id(), "JOB", "지남", today.minusDays(1));

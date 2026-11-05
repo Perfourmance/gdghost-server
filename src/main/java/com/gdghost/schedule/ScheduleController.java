@@ -45,7 +45,8 @@ public class ScheduleController {
         return scheduleService.list(me, from, to, kind);
     }
 
-    @Operation(summary = "일정 상세", description = "메모와 연결된 모집까지. 없거나 지웠으면 404.")
+    @Operation(summary = "일정 상세", description = "메모와 연결된 모집까지. updatedAt은 고친 적 없으면 null, "
+            + "editedByStaff는 마지막 수정자가 작성자가 아니면(운영진이 고쳤으면) true. 없거나 지웠으면 404.")
     @GetMapping("/{scheduleId}")
     public ScheduleDetail detail(@AuthenticationPrincipal AuthMember me, @PathVariable long scheduleId) {
         return scheduleService.detail(me.id(), scheduleId);
@@ -61,14 +62,16 @@ public class ScheduleController {
     }
 
     @Operation(summary = "일정 수정", description = "작성자 또는 운영진. 보낸 필드만 바꾼다. 장소 · 메모는 빈 문자열이면 지우고, "
-            + "종료일은 clearEndDate로 지운다. 동아리 · 학사로 바꾸는 것은 운영진만.")
+            + "종료일은 clearEndDate로 지운다. 동아리 · 학사로 바꾸는 것은 운영진만. 실제로 바뀐 게 있을 때만 수정 시각 · 수정자를 남기고, "
+            + "운영진이 남의 일정을 고치면 운영 기록(SCHEDULE_EDIT, 바뀐 필드 이름). 디스코드 알림 없음.")
     @PatchMapping("/{scheduleId}")
     public ScheduleDetail update(@AuthenticationPrincipal AuthMember me, @PathVariable long scheduleId,
             @RequestBody @Valid ScheduleUpdateRequest request) {
         return scheduleService.update(me, scheduleId, request);
     }
 
-    @Operation(summary = "일정 삭제", description = "작성자 또는 운영진. 연결된 모집은 남기고 연결만 끊는다.")
+    @Operation(summary = "일정 삭제", description = "작성자 또는 운영진. 연결된 모집은 남기고 연결만 끊는다. "
+            + "운영진이 남의 일정을 지우면 운영 기록(SCHEDULE_DELETE, 일정 제목). 디스코드 알림 없음.")
     @DeleteMapping("/{scheduleId}")
     public ResponseEntity<Void> delete(@AuthenticationPrincipal AuthMember me, @PathVariable long scheduleId) {
         scheduleService.delete(me, scheduleId);

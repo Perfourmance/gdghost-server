@@ -6,5 +6,6 @@ package com.gdghost.common.audit;
 public enum OpsTargetType {
     INVITE_CODE,
     REPORT,
-    CERTIFICATION
+    CERTIFICATION,
+    SCHEDULE
 }
