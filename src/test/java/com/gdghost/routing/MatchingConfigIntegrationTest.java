@@ -26,7 +26,7 @@ class MatchingConfigIntegrationTest {
 
         assertThat(config.categoryExperience()).containsOnlyKeys(QuestionCategory.values());
         config.categoryExperience().values().forEach(names -> assertThat(tags).containsAll(names));
-        assertThat(config.minScore()).isEqualTo(0.15);
+        assertThat(config.minScore()).isEqualTo(0.04);
     }
 
 }

@@ -56,21 +56,21 @@ r2:                             # 사진 저장소(비밀값). 비워 두면(로
   bucket: ${R2_BUCKET:}
 
 matching:                       # 후보 계산 설정. AI팀이 조정한다. 값을 바꾸면 version을 올린다 (AI 매칭 설계 5장)
-  version: 2026-10-v1
-  weights: { rule: 0.4, profile: 0.3, history: 0.3 }
-  rule: { experience: 0.6, interest: 0.3, department: 0.2, position: 0.1, senior: 0.1 }
+  version: 2026-11-v2
+  weights: { rule: 0.1, profile: 0.6, history: 0.3 }
+  rule: { experience: 0.6, interest: 1.0, department: 0.2, position: 0.1, senior: 0.1 }
   history: { adopted-bonus: 0.1, reason-min: 0.6 }
   activity: { answer-count-cap: 10, per-answer: 0.01, recent-days: 30, recent-bonus: 0.05, pass-penalty: 0.05 }
-  min-score: 0.15               # activity를 뺀 점수와 비교. 실측(2026-10-31): 맞는 짝 유사도 0.53–0.68
+  min-score: 0.04               # activity를 뺀 점수와 비교. 질문 벡터가 없으면(규칙만) v1과 같은 사람이 통과하는 값
   max-candidates: 3             # 처음 보내는 인원
   max-per-question: 5           # 넘기기 보충 · 지목을 합친 질문당 상한
   direct-timeout-hours: 24      # 지목받은 선배가 반응이 없으면 일반 라우팅 시작
   use-questioner-rules-on-anonymous: false
   category-experience:
-    JOB: [인턴, 정규직 취업, 공모전 수상, 해커톤, 자격증]
+    JOB: [인턴, 정규직 취업, 공모전 수상, 해커톤, 자격증, 대외활동]
     CAREER: [정규직 취업, 이직, 창업, 프리랜서·외주]
     PATH: [대학원 진학, 학부연구생, 휴학, 군 복무, 교환학생, 창업]
-    CAMPUS: [복수·부전공, 교환학생, 편입, 휴학, 동아리 운영진, 학부연구생]
+    CAMPUS: [복수·부전공, 교환학생, 편입, 휴학, 동아리 운영진, 학부연구생, 대외활동]
     STUDY: [오픈소스 기여, 해커톤, 공모전 수상, 학부연구생]
 
 web:                            # 프론트 주소. 메일 링크에 쓴다
