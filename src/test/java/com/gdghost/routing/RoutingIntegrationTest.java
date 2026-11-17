@@ -160,7 +160,7 @@ class RoutingIntegrationTest {
         assertThat(rows.getFirst().get("state")).isEqualTo("SENT");
         assertThat(rows.getFirst().get("sent_at")).isEqualTo(LocalDateTime.ofInstant(DAY, ZoneOffset.UTC));
         var detail = json.readTree((String) rows.getFirst().get("score_detail"));
-        assertThat(detail.path("version").asString()).isEqualTo("2026-10-v1");
+        assertThat(detail.path("version").asString()).isEqualTo("2026-11-v2");
         assertThat(detail.path("reasons").get(0).asString()).isEqualTo("경험: 인턴");
         assertThat(routedNotifications(tagged.id(), question)).isEqualTo(1);
         assertThat(batchMessage()).isEqualTo("sent=2 staff=0");
