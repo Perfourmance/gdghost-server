@@ -91,9 +91,9 @@ class DiscordAlertIntegrationTest {
         report("QUESTION", question, "두 번째 신고").andExpect(status().isConflict());
 
         discord.await(s -> s.is(DiscordChannel.STAFF, "신고 접수 · 질문")
-                && s.message().description().equals("사유 처음 신고"));
-        assertThat(discord.after(Duration.ofMillis(300), s -> s.message().description() != null
-                && s.message().description().contains("두 번째 신고"))).isEmpty();
+                && "처음 신고".equals(s.message().field("사유")));
+        assertThat(discord.after(Duration.ofMillis(300), s -> "두 번째 신고".equals(s.message().field("사유"))))
+                .isEmpty();
     }
 
     @Test
@@ -106,8 +106,8 @@ class DiscordAlertIntegrationTest {
 
         Sent sent = discord.await(s -> s.is(DiscordChannel.STAFF, "신고 접수 · 답변")
                 && s.message().url().equals(WEB + "/questions/" + question + "#answer-" + answer));
-        assertThat(sent.message().description()).isEqualTo("사유 광고 글입니다")
-                .doesNotContain(member.nickname());
+        assertThat(sent.message().field("사유")).isEqualTo("광고 글입니다");
+        assertThat(sent.message().description()).doesNotContain(member.nickname());
     }
 
     @Test
@@ -122,10 +122,12 @@ class DiscordAlertIntegrationTest {
                 .with(csrfToken())).andExpect(status().isNoContent());
 
         assertThat(discord.await(s -> s.is(DiscordChannel.STAFF, "계정 정지")
-                && s.message().description().startsWith(staff.nickname() + " → " + member.nickname())).message()
-                .description()).endsWith("\n사유 규칙 반복 위반");
+                && staff.nickname().equals(s.message().field("처리"))
+                && member.nickname().equals(s.message().field("대상"))).message().field("사유"))
+                .isEqualTo("규칙 반복 위반");
         discord.await(s -> s.is(DiscordChannel.STAFF, "계정 정지 해제")
-                && s.message().description().equals(staff.nickname() + " → " + member.nickname()));
+                && staff.nickname().equals(s.message().field("처리"))
+                && member.nickname().equals(s.message().field("대상")));
     }
 
     @Test
@@ -139,9 +141,9 @@ class DiscordAlertIntegrationTest {
         }
 
         discord.await(s -> s.is(DiscordChannel.STAFF, "계정 정지")
-                && s.message().description().contains(member.nickname()));
+                && member.nickname().equals(s.message().field("대상")));
         assertThat(discord.after(Duration.ofMillis(300), s -> s.is(DiscordChannel.STAFF, "계정 정지")
-                && s.message().description().contains(member.nickname()))).hasSize(1);
+                && member.nickname().equals(s.message().field("대상")))).hasSize(1);
     }
 
     @Test
@@ -152,9 +154,10 @@ class DiscordAlertIntegrationTest {
                         .with(csrfToken()).contentType(MediaType.APPLICATION_JSON).content("{\"staffTitle\":\"회장\"}"))
                 .andExpect(status().isOk());
 
-        String expected = dev.nickname() + " → " + member.nickname() + " (회장)";
-        discord.await(s -> s.is(DiscordChannel.STAFF, "운영진 지정") && s.message().description().equals(expected));
-        discord.await(s -> s.is(DiscordChannel.DEV, "운영진 지정") && s.message().description().equals(expected));
+        for (DiscordChannel channel : new DiscordChannel[] {DiscordChannel.STAFF, DiscordChannel.DEV}) {
+            discord.await(s -> s.is(channel, "운영진 지정") && dev.nickname().equals(s.message().field("처리"))
+                    && member.nickname().equals(s.message().field("대상")) && "회장".equals(s.message().field("직함")));
+        }
     }
 
     @Test
@@ -171,10 +174,12 @@ class DiscordAlertIntegrationTest {
 
         for (DiscordChannel channel : new DiscordChannel[] {DiscordChannel.STAFF, DiscordChannel.DEV}) {
             Sent requested = discord.await(s -> s.is(channel, "이메일 변경 요청 (어드민)")
-                    && s.message().description().startsWith(dev.nickname() + " → " + member.nickname()));
+                    && dev.nickname().equals(s.message().field("요청"))
+                    && member.nickname().equals(s.message().field("대상")));
             Sent changed = discord.await(s -> s.is(channel, "이메일 변경 완료 (어드민 요청)")
-                    && s.message().description().startsWith(member.nickname() + " · 요청 " + dev.nickname()));
-            assertThat(requested.message().description() + changed.message().description())
+                    && member.nickname().equals(s.message().field("대상"))
+                    && dev.nickname().equals(s.message().field("요청")));
+            assertThat(requested.message().toString() + changed.message().toString())
                     .doesNotContain("@").doesNotContain("얼굴 아는 사이");
         }
     }
@@ -188,7 +193,8 @@ class DiscordAlertIntegrationTest {
         opsListener.on(new MemberUnsuspendedEvent(staff.id(), withdrawn.id()));
 
         discord.await(s -> s.is(DiscordChannel.STAFF, "계정 정지 해제")
-                && s.message().description().equals(staff.nickname() + " → 탈퇴한 부원"));
+                && staff.nickname().equals(s.message().field("처리"))
+                && "탈퇴한 부원".equals(s.message().field("대상")));
     }
 
     @Test

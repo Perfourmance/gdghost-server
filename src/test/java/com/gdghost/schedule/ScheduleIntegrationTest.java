@@ -418,7 +418,7 @@ class ScheduleIntegrationTest {
         var sent = discord.await(message -> message.channel() == DiscordChannel.MEMBER
                 && message.message().title().equals("마감 임박 일정 2건"));
         assertThat(sent.message().description())
-                .contains("D-1 하루전", "D-3 삼일\\*전", "/schedules/" + d1, "/schedules/" + d3)
+                .contains("**D-1**  [하루전](", "**D-3**  [삼일\\*전](", "/schedules/" + d1 + ")", "/schedules/" + d3 + ")")
                 .doesNotContain("이틀전", "/schedules/" + startsSoonButLong);
         assertThat(jdbc.queryForList("""
                 SELECT member_id FROM notification WHERE type = 'DEADLINE' AND target_type = 'SCHEDULE' AND target_id = ?

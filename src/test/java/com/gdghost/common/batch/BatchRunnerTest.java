@@ -72,7 +72,8 @@ class BatchRunnerTest {
                 .isEqualTo(1);
 
         FakeDiscordGateway.Sent sent = discord.await(s -> s.is(DiscordChannel.DEV, "배치 실패"));
-        assertThat(sent.message().description()).contains("test\\_job").doesNotContain(SECRET);
+        assertThat(sent.message().field("배치")).isEqualTo("test\\_job");
+        assertThat(sent.message().toString()).doesNotContain(SECRET);
     }
 
     @Test

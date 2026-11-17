@@ -1,5 +1,6 @@
 package com.gdghost.common.config;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.util.EnumMap;
 import java.util.Map;
@@ -23,7 +24,8 @@ public class DiscordConfig {
     @Bean
     DiscordGateway discordGateway(@Value("${discord.webhook.member}") String member,
             @Value("${discord.webhook.staff}") String staff, @Value("${discord.webhook.dev}") String dev,
-            @Value("${discord.required:false}") boolean required) {
+            @Value("${discord.required:false}") boolean required,
+            @Value("${discord.image-base-url:${web.url}}") String imageBase, Clock clock) {
         Map<DiscordChannel, String> webhooks = new EnumMap<>(DiscordChannel.class);
         webhooks.put(DiscordChannel.MEMBER, member);
         webhooks.put(DiscordChannel.STAFF, staff);
@@ -35,7 +37,7 @@ public class DiscordConfig {
                 }
             });
         }
-        return new WebhookDiscordGateway(webhooks, Duration.ofSeconds(1));
+        return new WebhookDiscordGateway(webhooks, Duration.ofSeconds(1), imageBase, clock);
     }
 
     @Bean

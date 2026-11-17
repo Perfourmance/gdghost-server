@@ -2,6 +2,7 @@ package com.gdghost.common.batch;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.function.Supplier;
 
 import org.slf4j.Logger;
@@ -10,6 +11,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import com.gdghost.common.discord.DiscordChannel;
+import com.gdghost.common.discord.DiscordKind;
 import com.gdghost.common.discord.DiscordMessage;
 import com.gdghost.common.discord.DiscordNotifier;
 import com.gdghost.common.error.ErrorLogRecorder;
@@ -48,8 +50,10 @@ public class BatchRunner {
             String kind = e.getClass().getName();
             write(jobName, "FAILED", kind, startedAt);
             errorLog.recordQuietly(e, "batch " + jobName);
-            discord.send(DiscordChannel.DEV, new DiscordMessage("배치 실패", null,
-                    DiscordMessage.escape("배치 " + jobName + "\n종류 " + kind)));
+            discord.send(DiscordChannel.DEV, new DiscordMessage(DiscordKind.DEV_ALERT, "배치 실패", null,
+                    "자세한 내용은 어드민 에러 로그에서", List.of(
+                            DiscordMessage.Field.inline("배치", DiscordMessage.escape(jobName)),
+                            DiscordMessage.Field.wide("종류", DiscordMessage.escape(kind)))));
         }
     }
 

@@ -17,6 +17,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import com.gdghost.common.discord.DiscordChannel;
+import com.gdghost.common.discord.DiscordMessage;
 import com.gdghost.support.FakeDiscordGateway;
 import com.gdghost.support.Fixtures;
 import com.gdghost.support.Fixtures.TestMember;
@@ -131,8 +132,9 @@ class AdminRoutingExportIntegrationTest {
         assertThat(jdbc.queryForObject("""
                 SELECT COUNT(*) FROM ops_audit_log WHERE action = 'ROUTING_EXPORT' AND actor_id = ?
                 """, Integer.class, dev.id())).isEqualTo(2);
-        assertThat(discord.await(s -> s.is(DiscordChannel.DEV, "라우팅 CSV 내보내기"), 2).getFirst().message().description())
-                .contains("2026-10-01 ~ 2026-10-31", "1행");
+        DiscordMessage message = discord.await(s -> s.is(DiscordChannel.DEV, "라우팅 CSV 내보내기"), 2).getFirst().message();
+        assertThat(message.field("기간")).isEqualTo("2026-10-01 ~ 2026-10-31");
+        assertThat(message.field("행")).isEqualTo("1행");
     }
 
     @Test

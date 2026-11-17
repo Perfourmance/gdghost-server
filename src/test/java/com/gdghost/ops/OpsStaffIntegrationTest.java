@@ -81,7 +81,8 @@ class OpsStaffIntegrationTest {
                 .containsEntry("target_member_id", member.id());
         assertThat(notificationTitles(member)).containsExactly("운영진으로 지정됐어요");
         discord.await(s -> s.is(DiscordChannel.STAFF, "운영진 지정")
-                && s.message().description().equals(staff.nickname() + " → " + member.nickname() + " (총무)"));
+                && staff.nickname().equals(s.message().field("처리"))
+                && member.nickname().equals(s.message().field("대상")) && "총무".equals(s.message().field("직함")));
     }
 
     @Test
@@ -148,7 +149,8 @@ class OpsStaffIntegrationTest {
                 .containsEntry("staff_title", "총무");
         assertThat(notificationTitles(other)).containsExactly("운영진에서 해제됐어요");
         discord.await(s -> s.is(DiscordChannel.STAFF, "운영진 해제")
-                && s.message().description().equals(staff.nickname() + " → " + other.nickname() + " (총무)"));
+                && staff.nickname().equals(s.message().field("처리"))
+                && other.nickname().equals(s.message().field("대상")) && "총무".equals(s.message().field("직함")));
         assertThat(push.after(Duration.ofMillis(200), s -> s.target().endpoint().equals(endpoint))).isEmpty();
     }
 

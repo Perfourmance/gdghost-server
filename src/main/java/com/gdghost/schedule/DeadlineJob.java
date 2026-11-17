@@ -16,6 +16,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import com.gdghost.common.batch.BatchRunner;
 import com.gdghost.common.discord.DiscordChannel;
+import com.gdghost.common.discord.DiscordKind;
 import com.gdghost.common.discord.DiscordMessage;
 import com.gdghost.common.discord.DiscordNotifier;
 import com.gdghost.notification.NotificationTarget;
@@ -59,7 +60,7 @@ public class DeadlineJob {
         LocalDate today = LocalDate.now(clock.withZone(KST));
         List<ScheduleReader.Due> due = reader.dueOn(List.of(today.plusDays(1), today.plusDays(3)));
         if (!due.isEmpty()) {
-            discord.send(DiscordChannel.MEMBER, new DiscordMessage("마감 임박 일정 " + due.size() + "건", null,
+            discord.send(DiscordChannel.MEMBER, new DiscordMessage(DiscordKind.DEADLINE, "마감 임박 일정 " + due.size() + "건", null,
                     lines(due, today)));
         }
         int notified = 0;
@@ -94,8 +95,8 @@ public class DeadlineJob {
 
     private String lines(List<ScheduleReader.Due> due, LocalDate today) {
         String lines = due.stream().limit(MAX_LINES)
-                .map(schedule -> "· %s %s\n%s/schedules/%d".formatted(label(schedule, today),
-                        DiscordMessage.escape(schedule.title()), webUrl, schedule.id()))
+                .map(schedule -> "**%s**  %s".formatted(label(schedule, today), DiscordMessage.link(
+                        DiscordMessage.escape(schedule.title()), webUrl + "/schedules/" + schedule.id())))
                 .collect(Collectors.joining("\n"));
         return due.size() > MAX_LINES ? lines + "\n외 " + (due.size() - MAX_LINES) + "건" : lines;
     }

@@ -82,17 +82,17 @@ class ErrorLogRecorderTest {
         errorLog.record(boom("hong@gmail.com 중복"), "/api/v1/alerta");
 
         Sent sent = discord.await(s -> alertFor(s, "alerta"));
-        assertThat(sent.message().description())
-                .contains("종류 java.lang.IllegalStateException", "위치 com.gdghost.common.error.ErrorLogRecorderTest.boom",
-                        "누적 1회")
-                .doesNotContain("hong@gmail.com");
+        assertThat(sent.message().field("종류")).isEqualTo("java.lang.IllegalStateException");
+        assertThat(sent.message().field("위치")).contains("com.gdghost.common.error.ErrorLogRecorderTest.boom");
+        assertThat(sent.message().field("누적")).isEqualTo("1회");
+        assertThat(sent.message().toString()).doesNotContain("hong@gmail.com");
         assertThat(discord.after(Duration.ofMillis(300), s -> alertFor(s, "alerta"))).hasSize(1);
 
         jdbc.update("UPDATE error_log SET alerted_at = alerted_at - INTERVAL 61 MINUTE");
         errorLog.record(boom("다시"), "/api/v1/alerta");
 
         List<Sent> alerts = discord.await(s -> alertFor(s, "alerta"), 2);
-        assertThat(alerts.get(1).message().description()).contains("누적 3회");
+        assertThat(alerts.get(1).message().field("누적")).isEqualTo("3회");
     }
 
     @Test
@@ -104,7 +104,7 @@ class ErrorLogRecorderTest {
     }
 
     private static boolean alertFor(Sent sent, String path) {
-        return sent.is(DiscordChannel.DEV, "에러") && sent.message().description().contains(path);
+        return sent.is(DiscordChannel.DEV, "에러") && sent.message().field("경로").contains(path);
     }
 
     private static RuntimeException boom(String message) {

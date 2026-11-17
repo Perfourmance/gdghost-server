@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import com.gdghost.common.discord.DiscordChannel;
+import com.gdghost.common.discord.DiscordKind;
 import com.gdghost.common.discord.DiscordMessage;
 import com.gdghost.common.discord.DiscordNotifier;
 import com.gdghost.common.event.DomainEventListener;
@@ -27,7 +28,7 @@ public class QuestionDiscordListener {
     public void on(QuestionCreatedEvent event) {
         questions.findById(event.questionId())
                 .filter(question -> !question.isDeleted())
-                .ifPresent(question -> discord.send(DiscordChannel.MEMBER, new DiscordMessage(
+                .ifPresent(question -> discord.send(DiscordChannel.MEMBER, new DiscordMessage(DiscordKind.QUESTION,
                         "새 질문 · " + question.getCategory().label(),
                         webUrl + "/questions/" + question.getId(),
                         DiscordMessage.escape(question.getTitle()))));
