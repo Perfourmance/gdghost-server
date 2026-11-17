@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.gdghost.common.discord.DiscordChannel;
+import com.gdghost.common.discord.DiscordKind;
 import com.gdghost.common.discord.DiscordMessage;
 import com.gdghost.common.discord.DiscordNotifier;
 import com.gdghost.embedding.AiLogWriter;
@@ -132,7 +133,7 @@ public class RoutingDelivery {
         if (question == null) {
             return false;
         }
-        discord.send(DiscordChannel.STAFF, new DiscordMessage("1시간 미답변 · " + question.getCategory().label(),
+        discord.send(DiscordChannel.STAFF, new DiscordMessage(DiscordKind.UNANSWERED, "1시간 미답변 · " + question.getCategory().label(),
                 webUrl + "/questions/" + questionId, DiscordMessage.escape(question.getTitle())));
         return true;
     }

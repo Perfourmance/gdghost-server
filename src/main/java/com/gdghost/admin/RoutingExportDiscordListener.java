@@ -1,8 +1,11 @@
 package com.gdghost.admin;
 
+import java.util.List;
+
 import org.springframework.stereotype.Component;
 
 import com.gdghost.common.discord.DiscordChannel;
+import com.gdghost.common.discord.DiscordKind;
 import com.gdghost.common.discord.DiscordMessage;
 import com.gdghost.common.discord.DiscordNotifier;
 import com.gdghost.common.event.DomainEventListener;
@@ -25,8 +28,10 @@ public class RoutingExportDiscordListener {
     public void on(RoutingExportEvent event) {
         String actor = members.findById(event.actorId()).map(Member::getNickname).map(DiscordMessage::escape)
                 .orElse("탈퇴한 부원");
-        discord.send(DiscordChannel.DEV, new DiscordMessage("라우팅 CSV 내보내기", null,
-                actor + " · " + event.from() + " ~ " + event.to() + " · " + event.rows() + "행"));
+        discord.send(DiscordChannel.DEV, new DiscordMessage(DiscordKind.DEV, "라우팅 CSV 내보내기", null, null,
+                List.of(DiscordMessage.Field.inline("실행", actor),
+                        DiscordMessage.Field.inline("기간", event.from() + " ~ " + event.to()),
+                        DiscordMessage.Field.inline("행", event.rows() + "행"))));
     }
 
 }

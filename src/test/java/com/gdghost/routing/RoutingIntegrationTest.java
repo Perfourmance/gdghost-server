@@ -585,7 +585,7 @@ class RoutingIntegrationTest {
 
     @Test
     void 삼일_넘은_질문을_09시에_요약하고_없으면_보내지_않는다() {
-        OpsDigestJob digest = new OpsDigestJob(batch, reader, discord, new MutableClock(DAY));
+        OpsDigestJob digest = new OpsDigestJob(batch, reader, discord, new MutableClock(DAY), "http://localhost:3000");
         long notYet = question(hours(71));
 
         digest.run();
@@ -602,7 +602,8 @@ class RoutingIntegrationTest {
 
         // 하루 더 지난 질문은 다시 적지 않는다
         jdbc.update("UPDATE question SET state = 'ANSWERED' WHERE id = ?", notYet);
-        OpsDigestJob nextDay = new OpsDigestJob(batch, reader, discord, new MutableClock(DAY.plus(Duration.ofDays(1))));
+        OpsDigestJob nextDay = new OpsDigestJob(batch, reader, discord, new MutableClock(DAY.plus(Duration.ofDays(1))),
+                "http://localhost:3000");
         nextDay.run();
         assertThat(discordGateway.after(Duration.ofMillis(200), message -> message.channel() == DiscordChannel.STAFF))
                 .isEmpty();

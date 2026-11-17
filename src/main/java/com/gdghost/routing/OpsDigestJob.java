@@ -6,11 +6,13 @@ import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import com.gdghost.common.batch.BatchRunner;
 import com.gdghost.common.discord.DiscordChannel;
+import com.gdghost.common.discord.DiscordKind;
 import com.gdghost.common.discord.DiscordMessage;
 import com.gdghost.common.discord.DiscordNotifier;
 
@@ -25,12 +27,15 @@ public class OpsDigestJob {
     private final RoutingReader reader;
     private final DiscordNotifier discord;
     private final Clock clock;
+    private final String webUrl;
 
-    public OpsDigestJob(BatchRunner batch, RoutingReader reader, DiscordNotifier discord, Clock clock) {
+    public OpsDigestJob(BatchRunner batch, RoutingReader reader, DiscordNotifier discord, Clock clock,
+            @Value("${web.url}") String webUrl) {
         this.batch = batch;
         this.reader = reader;
         this.discord = discord;
         this.clock = clock;
+        this.webUrl = webUrl;
     }
 
     @Scheduled(cron = "0 0 9 * * *", zone = "Asia/Seoul")
@@ -48,14 +53,16 @@ public class OpsDigestJob {
                 .toList();
         if (!fresh.isEmpty()) {
             String titles = fresh.stream().limit(MAX_TITLES)
-                    .map(question -> "· " + DiscordMessage.escape(question.title()))
+                    .map(question -> "· " + DiscordMessage.link(DiscordMessage.escape(question.title()),
+                            webUrl + "/questions/" + question.id()))
                     .collect(Collectors.joining("\n"));
-            discord.send(DiscordChannel.STAFF, new DiscordMessage(
+            discord.send(DiscordChannel.STAFF, new DiscordMessage(DiscordKind.STAFF,
                     "3일 넘게 답이 없는 질문 " + fresh.size() + "건 추가 (전체 " + stale.size() + "건)", null, titles));
         }
         long pending = reader.pendingCertifications();
         if (pending > 0) {
-            discord.send(DiscordChannel.STAFF, new DiscordMessage("인증 확인 대기 " + pending + "건", null, null));
+            discord.send(DiscordChannel.STAFF, new DiscordMessage(DiscordKind.STAFF, "인증 확인 대기 " + pending + "건",
+                    webUrl + "/ops/certifications", DiscordMessage.link("인증 확인하러 가기 →", webUrl + "/ops/certifications")));
         }
         return "stale=%d new=%d pending=%d".formatted(stale.size(), fresh.size(), pending);
     }

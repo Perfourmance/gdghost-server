@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import com.gdghost.common.discord.DiscordChannel;
+import com.gdghost.common.discord.DiscordKind;
 import com.gdghost.common.discord.DiscordMessage;
 import com.gdghost.common.discord.DiscordNotifier;
 import com.gdghost.common.event.DomainEventListener;
@@ -28,6 +29,7 @@ public class NoticeDiscordListener {
         notices.findById(event.noticeId())
                 .filter(notice -> !notice.isDeleted())
                 .ifPresent(notice -> discord.send(DiscordChannel.MEMBER, new DiscordMessage(
+                        notice.isMustRead() ? DiscordKind.NOTICE_URGENT : DiscordKind.NOTICE,
                         notice.isMustRead() ? "[필독] 새 공지" : "새 공지",
                         webUrl + "/notices/" + notice.getId(),
                         DiscordMessage.escape(notice.getTitle()))));

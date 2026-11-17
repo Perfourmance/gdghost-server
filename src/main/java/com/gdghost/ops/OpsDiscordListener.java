@@ -1,11 +1,15 @@
 package com.gdghost.ops;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.stereotype.Component;
 
 import com.gdghost.common.discord.DiscordChannel;
+import com.gdghost.common.discord.DiscordKind;
 import com.gdghost.common.discord.DiscordMessage;
+import com.gdghost.common.discord.DiscordMessage.Field;
 import com.gdghost.common.discord.DiscordNotifier;
 import com.gdghost.common.event.DomainEventListener;
 import com.gdghost.common.security.Role;
@@ -28,15 +32,18 @@ public class OpsDiscordListener {
     public void on(MemberSuspendedEvent event) {
         Optional<Member> member = members.findById(event.memberId());
         String reason = member.map(Member::getSuspendedReason).orElse(null);
-        discord.send(DiscordChannel.STAFF, new DiscordMessage("계정 정지", null,
-                who(event.staffId()) + " → " + name(member)
-                        + (reason == null ? "" : "\n사유 " + DiscordMessage.escape(reason))));
+        List<Field> fields = new ArrayList<>(List.of(Field.inline("처리", who(event.staffId())),
+                Field.inline("대상", name(member))));
+        if (reason != null) {
+            fields.add(Field.wide("사유", DiscordMessage.escape(reason)));
+        }
+        discord.send(DiscordChannel.STAFF, new DiscordMessage(DiscordKind.STAFF, "계정 정지", null, null, fields));
     }
 
     @DomainEventListener
     public void on(MemberUnsuspendedEvent event) {
-        discord.send(DiscordChannel.STAFF, new DiscordMessage("계정 정지 해제", null,
-                who(event.staffId()) + " → " + who(event.memberId())));
+        discord.send(DiscordChannel.STAFF, new DiscordMessage(DiscordKind.STAFF, "계정 정지 해제", null, null,
+                List.of(Field.inline("처리", who(event.staffId())), Field.inline("대상", who(event.memberId())))));
     }
 
     /** 개발자가 지정했으면(첫 운영진) 개발자 서버에도 */
@@ -45,8 +52,8 @@ public class OpsDiscordListener {
         Optional<Member> actor = members.findById(event.actorId());
         Optional<Member> member = members.findById(event.memberId());
         String title = member.map(Member::getStaffTitle).orElse(null);
-        DiscordMessage message = new DiscordMessage("운영진 지정", null, name(actor) + " → " + name(member)
-                + (title == null ? "" : " (" + DiscordMessage.escape(title) + ")"));
+        DiscordMessage message = new DiscordMessage(DiscordKind.STAFF, "운영진 지정", null, null,
+                staffFields(name(actor), name(member), title));
         discord.send(DiscordChannel.STAFF, message);
         if (actor.map(Member::getRole).filter(Role.DEV::equals).isPresent()) {
             discord.send(DiscordChannel.DEV, message);
@@ -56,9 +63,16 @@ public class OpsDiscordListener {
     @DomainEventListener
     public void on(StaffRevokedEvent event) {
         String title = event.staffTitle();
-        discord.send(DiscordChannel.STAFF, new DiscordMessage("운영진 해제", null,
-                who(event.actorId()) + " → " + who(event.memberId())
-                        + (title == null ? "" : " (" + DiscordMessage.escape(title) + ")")));
+        discord.send(DiscordChannel.STAFF, new DiscordMessage(DiscordKind.STAFF, "운영진 해제", null, null,
+                staffFields(who(event.actorId()), who(event.memberId()), title)));
+    }
+
+    private static List<Field> staffFields(String actor, String member, String title) {
+        List<Field> fields = new ArrayList<>(List.of(Field.inline("처리", actor), Field.inline("대상", member)));
+        if (title != null) {
+            fields.add(Field.inline("직함", DiscordMessage.escape(title)));
+        }
+        return fields;
     }
 
     private String who(long memberId) {

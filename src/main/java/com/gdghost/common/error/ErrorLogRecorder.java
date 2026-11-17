@@ -6,6 +6,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
@@ -18,6 +19,7 @@ import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.gdghost.common.discord.DiscordChannel;
+import com.gdghost.common.discord.DiscordKind;
 import com.gdghost.common.discord.DiscordMessage;
 import com.gdghost.common.discord.DiscordNotifier;
 import com.gdghost.common.security.TokenHasher;
@@ -104,12 +106,11 @@ public class ErrorLogRecorder {
 
     private void alert(Throwable e, String path, int count) {
         StackTraceElement frame = appFrame(e);
-        String description = "종류 " + e.getClass().getName()
-                + "\n위치 " + (frame == null ? "-" : frame)
-                + "\n경로 " + (path == null ? "-" : path)
-                + "\n누적 " + count + "회";
-        discord.getObject().send(DiscordChannel.DEV, new DiscordMessage("에러", null,
-                DiscordMessage.escape(description)));
+        discord.getObject().send(DiscordChannel.DEV, new DiscordMessage(DiscordKind.DEV_ALERT, "에러", null, null,
+                List.of(DiscordMessage.Field.wide("종류", DiscordMessage.escape(e.getClass().getName())),
+                        DiscordMessage.Field.wide("위치", DiscordMessage.escape(frame == null ? "-" : frame.toString())),
+                        DiscordMessage.Field.inline("경로", DiscordMessage.escape(path == null ? "-" : path)),
+                        DiscordMessage.Field.inline("누적", count + "회"))));
     }
 
     static String fingerprint(Throwable e) {

@@ -1,10 +1,14 @@
 package com.gdghost.report;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import com.gdghost.common.discord.DiscordChannel;
+import com.gdghost.common.discord.DiscordKind;
 import com.gdghost.common.discord.DiscordMessage;
+import com.gdghost.common.discord.DiscordMessage.Field;
 import com.gdghost.common.discord.DiscordNotifier;
 import com.gdghost.common.event.DomainEventListener;
 import com.gdghost.feed.FeedCommentModeration;
@@ -39,8 +43,15 @@ public class ReportDiscordListener {
     @DomainEventListener
     public void on(ReportCreatedEvent event) {
         reports.findById(event.reportId()).ifPresent(report -> discord.send(DiscordChannel.STAFF,
-                new DiscordMessage("신고 접수 · " + label(report.getTargetType()), link(report),
-                        "사유 " + DiscordMessage.escape(report.getReason()))));
+                message(report)));
+    }
+
+    private DiscordMessage message(Report report) {
+        String link = link(report);
+        return new DiscordMessage(DiscordKind.REPORT, "신고 접수 · " + label(report.getTargetType()), link,
+                link == null ? "운영 화면에서 처리해 주세요" : DiscordMessage.link("신고된 글 보기 →", link)
+                        + " · " + DiscordMessage.link("신고 처리하기", webUrl + "/ops/reports"),
+                List.of(Field.wide("사유", DiscordMessage.escape(report.getReason()))));
     }
 
     private String link(Report report) {

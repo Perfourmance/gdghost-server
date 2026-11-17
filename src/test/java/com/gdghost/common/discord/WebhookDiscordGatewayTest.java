@@ -6,7 +6,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -22,7 +25,9 @@ import com.sun.net.httpserver.HttpServer;
 class WebhookDiscordGatewayTest {
 
     private static final DiscordMessage MESSAGE =
-            new DiscordMessage("새 질문 · 취업·채용", "http://localhost:3000/questions/1", "인턴 준비 @everyone");
+            new DiscordMessage(DiscordKind.QUESTION, "새 질문 · 취업·채용", "http://localhost:3000/questions/1",
+                    "인턴 준비 @everyone");
+    private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-11-17T03:00:00Z"), ZoneOffset.UTC);
 
     private HttpServer server;
     private final List<String> bodies = new CopyOnWriteArrayList<>();
@@ -48,22 +53,42 @@ class WebhookDiscordGatewayTest {
     }
 
     @Test
-    void embed_하나로_보내고_멘션은_막는다() {
+    void 글_제목은_큰_링크로_분류는_윗줄로_보내고_멘션은_막는다() {
         gateway(webhook).send(DiscordChannel.MEMBER, MESSAGE);
 
         assertThat(bodies).hasSize(1);
         String body = bodies.getFirst();
-        assertThat(JsonPath.<String>read(body, "$.embeds[0].title")).isEqualTo(MESSAGE.title());
+        assertThat(JsonPath.<String>read(body, "$.username")).isEqualTo("GDGhost");
+        assertThat(JsonPath.<String>read(body, "$.embeds[0].author.name")).isEqualTo("💬 새 질문 · 취업·채용");
+        assertThat(JsonPath.<String>read(body, "$.embeds[0].title")).isEqualTo(MESSAGE.description());
         assertThat(JsonPath.<String>read(body, "$.embeds[0].url")).isEqualTo(MESSAGE.url());
-        assertThat(JsonPath.<String>read(body, "$.embeds[0].description")).isEqualTo(MESSAGE.description());
+        assertThat(JsonPath.<String>read(body, "$.embeds[0].description"))
+                .isEqualTo("답해 줄 선배를 기다리고 있어요\n[바로 보기 →](http://localhost:3000/questions/1)");
+        assertThat(JsonPath.<Integer>read(body, "$.embeds[0].color")).isEqualTo(0x2466DD);
+        assertThat(JsonPath.<String>read(body, "$.embeds[0].timestamp")).isEqualTo("2026-11-17T03:00:00Z");
         assertThat(JsonPath.<List<?>>read(body, "$.allowed_mentions.parse")).isEmpty();
     }
 
     @Test
     void 링크_본문이_없으면_빼고_보낸다() {
-        gateway(webhook).send(DiscordChannel.STAFF, new DiscordMessage("계정 정지", null, null));
+        gateway(webhook).send(DiscordChannel.STAFF, new DiscordMessage(DiscordKind.STAFF, "계정 정지", null, null));
 
-        assertThat(JsonPath.<Map<String, Object>>read(bodies.getFirst(), "$.embeds[0]")).containsOnlyKeys("title");
+        assertThat(JsonPath.<Map<String, Object>>read(bodies.getFirst(), "$.embeds[0]"))
+                .containsOnlyKeys("color", "title", "timestamp", "footer");
+        assertThat(JsonPath.<String>read(bodies.getFirst(), "$.embeds[0].title")).isEqualTo("🛡️ 계정 정지");
+    }
+
+    @Test
+    void 프론트_주소가_https면_썸네일과_아이콘을_붙인다() {
+        new WebhookDiscordGateway(Map.of(DiscordChannel.MEMBER, webhook), Duration.ZERO, "https://gdghost.kro.kr/",
+                CLOCK).send(DiscordChannel.MEMBER, MESSAGE);
+
+        String body = bodies.getFirst();
+        assertThat(JsonPath.<String>read(body, "$.avatar_url")).isEqualTo("https://gdghost.kro.kr/icon-192.png");
+        assertThat(JsonPath.<String>read(body, "$.embeds[0].thumbnail.url"))
+                .isEqualTo("https://gdghost.kro.kr/discord/discord-question.png");
+        assertThat(JsonPath.<String>read(body, "$.embeds[0].footer.icon_url"))
+                .isEqualTo("https://gdghost.kro.kr/icon-192.png");
     }
 
     @Test
@@ -98,9 +123,9 @@ class WebhookDiscordGatewayTest {
 
     @Test
     void 주소가_비어_있는_채널은_보내지_않는다() {
-        new WebhookDiscordGateway(Map.of(DiscordChannel.MEMBER, ""), Duration.ZERO)
+        new WebhookDiscordGateway(Map.of(DiscordChannel.MEMBER, ""), Duration.ZERO, null, CLOCK)
                 .send(DiscordChannel.MEMBER, MESSAGE);
-        new WebhookDiscordGateway(Map.of(), Duration.ZERO).send(DiscordChannel.DEV, MESSAGE);
+        new WebhookDiscordGateway(Map.of(), Duration.ZERO, null, CLOCK).send(DiscordChannel.DEV, MESSAGE);
 
         assertThat(bodies).isEmpty();
     }
@@ -115,7 +140,7 @@ class WebhookDiscordGatewayTest {
     private WebhookDiscordGateway gateway(String url) {
         return new WebhookDiscordGateway(
                 Map.of(DiscordChannel.MEMBER, url, DiscordChannel.STAFF, url, DiscordChannel.DEV, url),
-                Duration.ZERO);
+                Duration.ZERO, "http://localhost:3000", CLOCK);
     }
 
 }
