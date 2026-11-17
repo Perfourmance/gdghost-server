@@ -49,7 +49,7 @@ class ProfileUpdateIntegrationTest {
 
     @Test
     void 보낸_필드만_바꾸고_내_프로필_모양으로_돌려준다() throws Exception {
-        jdbc.update("UPDATE member SET department = '컴퓨터과학과', bio = '소개' WHERE id = ?", member.id());
+        jdbc.update("UPDATE member SET department = '컴퓨터과학전공', bio = '소개' WHERE id = ?", member.id());
 
         patchProfile("{\"position\":\"AI\",\"status\":\"GRADUATED\",\"statusNote\":\" 인턴 근무 중 \"}")
                 .andExpect(status().isOk())
@@ -58,7 +58,7 @@ class ProfileUpdateIntegrationTest {
                 .andExpect(jsonPath("$.status").value("GRADUATED"))
                 .andExpect(jsonPath("$.statusNote").value("인턴 근무 중"))
                 .andExpect(jsonPath("$.statusNoteUpdatedAt").isNotEmpty())
-                .andExpect(jsonPath("$.department").value("컴퓨터과학과"))
+                .andExpect(jsonPath("$.department").value("컴퓨터과학전공"))
                 .andExpect(jsonPath("$.bio").value("소개"))
                 .andExpect(jsonPath("$.nickname").value(member.nickname()));
     }
@@ -89,10 +89,17 @@ class ProfileUpdateIntegrationTest {
     }
 
     @Test
-    void 학과는_비울_수_없다() throws Exception {
+    void 학과는_목록에_있는_값만_받는다() throws Exception {
         patchProfile("{\"department\":\"  \"}")
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+        patchProfile("{\"department\":\"컴과\"}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("department"));
+
+        patchProfile("{\"department\":\"행정학부\"}")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.department").value("행정학부"));
     }
 
     @Test

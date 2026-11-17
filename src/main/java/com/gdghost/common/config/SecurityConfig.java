@@ -39,7 +39,7 @@ public class SecurityConfig {
     // 비회원 처리 '허용' · '제목만'. 그 밖의 /api/v1은 로그인 필요
     private static final String[] GUEST_GET_APIS = {
             "/api/v1/auth/login-ids/availability", "/api/v1/auth/nicknames/availability",
-            "/api/v1/tags", "/api/v1/home", "/api/v1/questions", "/api/v1/schedules", "/api/v1/shares",
+            "/api/v1/tags", "/api/v1/departments", "/api/v1/home", "/api/v1/questions", "/api/v1/schedules", "/api/v1/shares",
     };
     private static final String[] GUEST_POST_APIS = {
             "/api/v1/auth/login", "/api/v1/auth/signup", "/api/v1/auth/signup/invite-code",

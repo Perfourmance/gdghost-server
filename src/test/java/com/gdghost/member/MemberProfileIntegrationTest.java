@@ -50,7 +50,7 @@ class MemberProfileIntegrationTest {
     @Test
     void 실명_학과_학번과_태그_공개_연락_수단을_준다() throws Exception {
         jdbc.update("""
-                UPDATE member SET student_no = '19', department = '컴퓨터과학과', bio = '소개', accept_coffee = TRUE,
+                UPDATE member SET student_no = '19', department = '컴퓨터과학전공', bio = '소개', accept_coffee = TRUE,
                                   coffee_memo = '메모'
                 WHERE id = ?
                 """, other.id());
@@ -68,7 +68,7 @@ class MemberProfileIntegrationTest {
                 .andExpect(jsonPath("$.nickname").value(other.nickname()))
                 .andExpect(jsonPath("$.name").isNotEmpty())
                 .andExpect(jsonPath("$.studentNo").value("19"))
-                .andExpect(jsonPath("$.department").value("컴퓨터과학과"))
+                .andExpect(jsonPath("$.department").value("컴퓨터과학전공"))
                 .andExpect(jsonPath("$.isStaff").value(false))
                 .andExpect(jsonPath("$.interests[0].name").value("백엔드"))
                 .andExpect(jsonPath("$.interests[0].skills", contains("Spring", "DB 설계")))

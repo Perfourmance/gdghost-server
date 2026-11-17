@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.gdghost.member.MemberStatus;
 import com.gdghost.member.Position;
+import com.gdghost.member.ValidDepartment;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -16,7 +17,7 @@ public record SignupProfileRequest(
         @NotBlank @Size(min = 2, max = 12) String nickname,
         @NotNull Position position,
         @NotNull @Pattern(regexp = "\\d{2}", message = "숫자 2자리여야 합니다.") String studentNo,
-        @NotBlank @Size(max = 30) String department,
+        @NotNull @ValidDepartment String department,
         @NotNull MemberStatus status,
         @NotNull List<@NotNull Long> interestTagIds,
         List<@NotNull Long> skillTagIds,
