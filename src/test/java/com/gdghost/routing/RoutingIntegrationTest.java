@@ -481,9 +481,9 @@ class RoutingIntegrationTest {
 
     @Test
     void 익명_질문은_질문자_규칙을_쓰지_않는다() {
-        jdbc.update("UPDATE member SET department = '컴퓨터공학과', generation = 5 WHERE id = ?", author.id());
+        jdbc.update("UPDATE member SET department = '컴퓨터과학전공', generation = 5 WHERE id = ?", author.id());
         TestMember sameDepartment = candidate("인턴");
-        jdbc.update("UPDATE member SET department = '컴퓨터공학과', generation = 1 WHERE id = ?", sameDepartment.id());
+        jdbc.update("UPDATE member SET department = '컴퓨터과학전공', generation = 1 WHERE id = ?", sameDepartment.id());
         long question = fixtures.question(author.id(), true);
         age(question, hours(3));
 
@@ -496,9 +496,9 @@ class RoutingIntegrationTest {
 
     @Test
     void 실명_질문은_전달_현황에_사유를_보여_주고_받은_사람은_넘길_수_있다() throws Exception {
-        jdbc.update("UPDATE member SET department = '컴퓨터공학과' WHERE id = ?", author.id());
+        jdbc.update("UPDATE member SET department = '컴퓨터과학전공' WHERE id = ?", author.id());
         TestMember target = candidate("인턴");
-        jdbc.update("UPDATE member SET department = '컴퓨터공학과' WHERE id = ?", target.id());
+        jdbc.update("UPDATE member SET department = '컴퓨터과학전공' WHERE id = ?", target.id());
         long question = question(hours(3));
 
         route(DAY);

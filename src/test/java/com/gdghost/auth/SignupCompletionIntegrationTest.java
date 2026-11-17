@@ -188,6 +188,16 @@ class SignupCompletionIntegrationTest {
     }
 
     @Test
+    void 학과_목록에_없는_학과는_400() throws Exception {
+        body.department = "컴퓨터과학과";
+
+        signup()
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.errors[0].field").value("profile.department"));
+    }
+
+    @Test
     void 비밀번호에_특수문자가_없으면_400() throws Exception {
         body.password = "gdgoc12345";
 
@@ -261,6 +271,7 @@ class SignupCompletionIntegrationTest {
         String loginId = "serim01";
         String password = "gdgoc1234!";
         String nickname = "세림";
+        String department = "컴퓨터과학전공";
         List<Long> interests;
         List<Long> skills;
         List<Long> experiences;
@@ -271,10 +282,10 @@ class SignupCompletionIntegrationTest {
             return """
                     {"signupToken": "%s", "loginId": "%s", "password": "%s",
                      "profile": {"name": "오세림", "nickname": "%s", "position": "DEV", "studentNo": "24",
-                                 "department": "컴퓨터과학과", "status": "ENROLLED",
+                                 "department": "%s", "status": "ENROLLED",
                                  "interestTagIds": %s, "skillTagIds": %s, "experienceTagIds": %s,
                                  "statusNote": %s, "bio": %s}}
-                    """.formatted(token, loginId, password, nickname, array(interests), array(skills),
+                    """.formatted(token, loginId, password, nickname, department, array(interests), array(skills),
                     array(experiences), string(statusNote), string(bio));
         }
 

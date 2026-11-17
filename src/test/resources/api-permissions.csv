@@ -25,9 +25,11 @@ GET,/api/v1/ops/members,STAFF,401,1
 GET,/api/v1/ops/members/{memberId}/audit-logs,STAFF,401,1
 GET,/api/v1/ops/members/{memberId}/email,STAFF,401,1
 POST,/api/v1/admin/members/{memberId}/email-change,DEV,404,1
+GET,/api/v1/admin/members,DEV,404,1
 DELETE,/api/v1/ops/members/{memberId}/suspension,STAFF,401,1
 POST,/api/v1/ops/members/{memberId}/suspension,STAFF,401,1
 GET,/api/v1/tags,PUBLIC,허용,1
+GET,/api/v1/departments,PUBLIC,허용,1
 GET,/api/v1/me,MEMBER,401,2
 PUT,/api/v1/me/contacts,MEMBER,401,2
 PATCH,/api/v1/me/profile,MEMBER,401,2

@@ -4,7 +4,6 @@ import java.util.List;
 
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Null;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 /**
@@ -16,7 +15,7 @@ public record ProfileUpdateRequest(
         @Null(message = "기수는 바꿀 수 없습니다.") Integer generation,
         @Null(message = "학번은 바꿀 수 없습니다.") String studentNo,
         @Size(min = 2, max = 12) String nickname,
-        @Size(max = 30) @Pattern(regexp = ".*\\S.*", message = "비워 둘 수 없습니다.") String department,
+        @ValidDepartment String department,
         Position position,
         MemberStatus status,
         List<@NotNull Long> interestTagIds,
